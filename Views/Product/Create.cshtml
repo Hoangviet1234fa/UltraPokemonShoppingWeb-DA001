@@ -1,0 +1,14 @@
+@model Product
+@{ ViewData["Title"] = "Thêm thẻ bài"; }
+
+<h2>Thêm thẻ bài</h2>
+<hr />
+<div class="row">
+    <div class="col-md-5">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            <partial name="_ProductForm" model="Model" />
+            <button type="submit" class="btn btn-primary">Create</button>
+            <a asp-action="Index" class="ms-2">Back to List</a>
+        </form>
+    </div>
+</div>

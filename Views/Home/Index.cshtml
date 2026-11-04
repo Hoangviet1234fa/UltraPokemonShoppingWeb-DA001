@@ -1,0 +1,24 @@
+@model IEnumerable<UltraPokemon.Models.Product>
+@{ ViewData["Title"] = "Trang chủ"; }
+
+<div class="text-center mb-4">
+    <h1 class="display-5">Welcome</h1>
+    <p class="text-muted">Khám phá bộ sưu tập thẻ bài Pokemon TCG lấp lánh.</p>
+    <form asp-controller="Product" asp-action="Index" method="get" class="d-flex justify-content-center gap-2 mb-3">
+        <input type="text" name="searchString" class="form-control w-50" placeholder="Nhập tên lá bài (ví dụ: Charizard)..." />
+        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+    </form>
+    <a asp-controller="Product" asp-action="Index" class="btn btn-outline-primary btn-sm">Xem tất cả thẻ bài</a>
+</div>
+
+<h4 class="mb-3">✨ Thẻ bài nổi bật</h4>
+<div class="row">
+    @foreach (var item in Model)
+    {
+        <div class="col-6 col-md-3 mb-4"><partial name="_ProductCard" model="item" /></div>
+    }
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info text-center">Chưa có thẻ bài nào.</div>
+    }
+</div>

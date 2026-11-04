@@ -1,0 +1,85 @@
+@model IEnumerable<UltraPokemon.Models.Product>
+@{
+    ViewData["Title"] = "Danh sách thẻ bài";
+    var elements = (List<string>)ViewBag.Elements;
+    string? current = ViewBag.CurrentElement;
+    string? keyword = ViewBag.CurrentFilter;
+    string? sort = ViewBag.CurrentSort;
+    string? note = ViewBag.SearchNote;
+}
+
+<div class="d-flex justify-content-between align-items-center">
+    <h2 class="my-4">Danh Sách Thẻ Bài Pokémon</h2>
+    <a asp-action="Create" class="btn btn-success btn-sm">+ Thêm thẻ bài</a>
+</div>
+
+@* Ô tìm kiếm theo tên: tìm là bỏ lọc Hệ để ra đúng thẻ khách gõ *@
+<form asp-action="Index" method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-md-6">
+        <input type="text" name="searchString" value="@keyword" class="form-control"
+               placeholder="Nhập tên lá bài (ví dụ: Charizard)..." />
+    </div>
+    <div class="col-md-3">
+        <select name="sortOrder" class="form-select">
+            <option value="" selected="@(string.IsNullOrEmpty(sort))">Sắp xếp mặc định</option>
+            <option value="name_desc" selected="@(sort == "name_desc")">Tên Z → A</option>
+            <option value="price_asc" selected="@(sort == "price_asc")">Giá tăng dần</option>
+            <option value="price_desc" selected="@(sort == "price_desc")">Giá giảm dần</option>
+            <option value="power_desc" selected="@(sort == "power_desc")">Sức mạnh cao → thấp</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Xóa lọc</a>
+    </div>
+</form>
+
+@* Nút lọc theo Hệ: bấm "Hệ Lửa" là chỉ hiện bài Hệ Lửa *@
+<div class="mb-3">
+    <span class="me-1">Lọc theo Hệ:</span>
+    <a asp-action="Index" asp-route-sortOrder="@sort"
+       class="btn btn-sm @(string.IsNullOrEmpty(current) ? "btn-dark" : "btn-outline-dark")">Tất cả</a>
+    @foreach (var el in elements)
+    {
+        <a asp-action="Index" asp-route-elementType="@el" asp-route-sortOrder="@sort"
+           class="btn btn-sm @ElementHelper.Button(el, el == current)">@el</a>
+    }
+</div>
+
+@if (!string.IsNullOrWhiteSpace(keyword) || !string.IsNullOrEmpty(current))
+{
+    <p class="small mb-1">
+        Đang hiển thị:
+        @if (!string.IsNullOrWhiteSpace(keyword)) { <span class="badge bg-dark">Tên: @keyword</span> }
+        @if (!string.IsNullOrEmpty(current)) { <span class="badge bg-@ElementHelper.Color(current)">@current</span> }
+        <a asp-action="Index" class="ms-1">Bỏ lọc</a>
+    </p>
+}
+
+@if (!string.IsNullOrEmpty(note))
+{
+    <div class="alert alert-info py-2 small">@note</div>
+}
+
+<p class="text-muted small">Tìm thấy <strong>@Model.Count()</strong> thẻ bài.</p>
+<hr />
+
+<div class="row">
+    @if (Model.Any())
+    {
+        foreach (var item in Model)
+        {
+            <div class="col-6 col-md-3 mb-4">
+                <partial name="_ProductCard" model="item" />
+                <div class="small text-center mt-1">
+                    <a asp-action="Edit" asp-route-id="@item.Id">Sửa</a> |
+                    <a asp-action="Delete" asp-route-id="@item.Id">Xóa</a>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-warning text-center">Không tìm thấy lá bài nào phù hợp!</div>
+    }
+</div>

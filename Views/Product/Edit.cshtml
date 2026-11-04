@@ -1,0 +1,19 @@
+@model Product
+@{ ViewData["Title"] = "Sửa thẻ bài"; }
+
+<h2>Sửa thẻ bài</h2>
+<hr />
+<div class="row">
+    <div class="col-md-5">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data">
+            <input type="hidden" asp-for="Id" />
+            <partial name="_ProductForm" model="Model" />
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a asp-action="Index" class="ms-2">Back to List</a>
+        </form>
+    </div>
+    <div class="col-md-4 text-center">
+        <p class="fw-bold">Ảnh hiện tại</p>
+        <img src="@ImageHelper.Resolve(Env, Model)" alt="@Model.Name" class="img-fluid rounded shadow" style="max-height:300px" />
+    </div>
+</div>

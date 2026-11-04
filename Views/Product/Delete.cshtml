@@ -1,0 +1,23 @@
+@model Product
+@{ ViewData["Title"] = "Xóa thẻ bài"; }
+
+<h2>Delete</h2>
+<h3>Bạn có chắc muốn xóa thẻ bài này?</h3>
+<hr />
+<div class="row">
+    <div class="col-md-3">
+        <img src="@ImageHelper.Resolve(Env, Model)" alt="@Model.Name" class="img-fluid rounded shadow" />
+    </div>
+    <div class="col-md-6">
+        <dl class="row">
+            <dt class="col-sm-3">Tên</dt><dd class="col-sm-9">@Model.Name</dd>
+            <dt class="col-sm-3">Hệ</dt><dd class="col-sm-9">@Model.ElementType</dd>
+            <dt class="col-sm-3">Giá</dt><dd class="col-sm-9">@Model.Price.ToString("N0") VNĐ</dd>
+        </dl>
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="Id" />
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button> |
+            <a asp-action="Index">Back to List</a>
+        </form>
+    </div>
+</div>

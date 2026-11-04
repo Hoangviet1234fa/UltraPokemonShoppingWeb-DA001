@@ -1,0 +1,44 @@
+﻿@model IEnumerable<UltraPokemon.Models.User>
+
+<div class="container mt-4">
+    <h2>Quản lý tài khoản người dùng (Admin Panel)</h2>
+    <hr />
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Quyền hạn (Role)</th>
+                <th>Trạng thái duyệt</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in Model)
+            {
+                <tr>
+                    <td>@u.Id</td>
+                    <td>@u.Email</td>
+                    <td>
+                        <span class="badge bg-@(u.Role == "Admin" ? "danger" : "primary")">@u.Role</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-@(u.IsApproved ? "success" : "warning")">@(u.IsApproved ? "Đã duyệt" : "Chờ duyệt")</span>
+                    </td>
+                    <td>
+                        @if (u.Email != "admin@ultrapokemon.com")
+                        {
+                            <a asp-action="Delete" asp-route-id="@u.Id" class="btn btn-danger btn-sm" onclick="return confirm('Bạn có chắc muốn xóa tài khoản này?');">Xóa</a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
