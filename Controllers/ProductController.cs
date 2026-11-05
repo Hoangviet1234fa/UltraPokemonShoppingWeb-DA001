@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -22,9 +23,7 @@ public class ProductController : Controller
     }
 
     // ------------------------------------------------------------------
-    // INDEX: danh sách thẻ bài + TÌM KIẾM theo tên + LỌC theo Hệ
-    //   /Product?searchString=Charizard          -> chỉ ra đúng thẻ Charizard
-    //   /Product?elementType=Hệ Lửa              -> chỉ ra các thẻ Hệ Lửa
+    // INDEX: Mở công khai cho mọi người xem danh sách, tìm kiếm, lọc
     // ------------------------------------------------------------------
     public async Task<IActionResult> Index(string? searchString, string? elementType, string? sortOrder)
     {
@@ -87,10 +86,10 @@ public class ProductController : Controller
         // 3) Sắp xếp. Khi tìm theo tên và chưa chọn sắp xếp: khớp chính xác -> bắt đầu bằng -> còn lại
         products = sortOrder switch
         {
-            "price_asc"  => products.OrderBy(p => p.Price).ToList(),
+            "price_asc" => products.OrderBy(p => p.Price).ToList(),
             "price_desc" => products.OrderByDescending(p => p.Price).ToList(),
             "power_desc" => products.OrderByDescending(p => p.Power).ToList(),
-            "name_desc"  => products.OrderByDescending(p => p.Name).ToList(),
+            "name_desc" => products.OrderByDescending(p => p.Name).ToList(),
             _ when ranked => products
                 .OrderBy(p => { var n = TextHelper.Normalize(p.Name); return n == keyword ? 0 : n.StartsWith(keyword) ? 1 : 2; })
                 .ThenBy(p => p.Name).ToList(),
@@ -106,7 +105,7 @@ public class ProductController : Controller
         return View(products);
     }
 
-    // Trang chi tiết: ảnh lớn, giá, hệ, chỉ số sức mạnh
+    // Trang chi tiết: Mở công khai cho mọi người xem thông tin thẻ bài
     public async Task<IActionResult> Details(int? id)
     {
         if (id == null) return BadRequest();
@@ -123,13 +122,15 @@ public class ProductController : Controller
         return View(product);
     }
 
-    // ---------- Create ----------
+    // ---------- Create (CHỈ ADMIN MỚI ĐƯỢC PHÉP TRUY CẬP) ----------
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create()
     {
         await LoadElements();
         return View(new Product());
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create([Bind("Name,ElementType,Power,Price,Description")] Product product, IFormFile? imageFile)
     {
@@ -156,7 +157,8 @@ public class ProductController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ---------- Edit ----------
+    // ---------- Edit (CHỈ ADMIN MỚI ĐƯỢC PHÉP TRUY CẬP) ----------
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Edit(int? id)
     {
         if (id == null) return NotFound();
@@ -166,6 +168,7 @@ public class ProductController : Controller
         return View(product);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, [Bind("Id,Name,ElementType,Power,Price,Description")] Product input, IFormFile? imageFile)
     {
@@ -201,7 +204,8 @@ public class ProductController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ---------- Delete ----------
+    // ---------- Delete (CHỈ ADMIN MỚI ĐƯỢC PHÉP TRUY CẬP) ----------
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int? id)
     {
         if (id == null) return NotFound();
@@ -209,6 +213,7 @@ public class ProductController : Controller
         return product == null ? NotFound() : View(product);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {

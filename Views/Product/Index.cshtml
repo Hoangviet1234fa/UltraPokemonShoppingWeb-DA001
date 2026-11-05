@@ -10,10 +10,15 @@
 
 <div class="d-flex justify-content-between align-items-center">
     <h2 class="my-4">Danh Sách Thẻ Bài Pokémon</h2>
-    <a asp-action="Create" class="btn btn-success btn-sm">+ Thêm thẻ bài</a>
+
+    <!-- CHỈ ADMIN MỚI THẤY NÚT THÊM THẺ BÀI -->
+    @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+    {
+        <a asp-action="Create" class="btn btn-success btn-sm">+ Thêm thẻ bài</a>
+    }
 </div>
 
-@* Ô tìm kiếm theo tên: tìm là bỏ lọc Hệ để ra đúng thẻ khách gõ *@
+@* Ô tìm kiếm theo tên: tìm là bỏ lọc Hệ để ra đúng thẻ khách gò *@
 <form asp-action="Index" method="get" class="row g-2 align-items-end mb-3">
     <div class="col-md-6">
         <input type="text" name="searchString" value="@keyword" class="form-control"
@@ -50,8 +55,14 @@
 {
     <p class="small mb-1">
         Đang hiển thị:
-        @if (!string.IsNullOrWhiteSpace(keyword)) { <span class="badge bg-dark">Tên: @keyword</span> }
-        @if (!string.IsNullOrEmpty(current)) { <span class="badge bg-@ElementHelper.Color(current)">@current</span> }
+        @if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            <span class="badge bg-dark">Tên: @keyword</span>
+        }
+        @if (!string.IsNullOrEmpty(current))
+        {
+            <span class="badge bg-@ElementHelper.Color(current)">@current</span>
+        }
         <a asp-action="Index" class="ms-1">Bỏ lọc</a>
     </p>
 }
@@ -71,10 +82,15 @@
         {
             <div class="col-6 col-md-3 mb-4">
                 <partial name="_ProductCard" model="item" />
-                <div class="small text-center mt-1">
-                    <a asp-action="Edit" asp-route-id="@item.Id">Sửa</a> |
-                    <a asp-action="Delete" asp-route-id="@item.Id">Xóa</a>
-                </div>
+
+                <!-- CHỈ ADMIN MỚI THẤY CÁC NÚT SỬA / XÓA DƯỚI MỖI THẺ BÀI -->
+                @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+                {
+                    <div class="small text-center mt-1">
+                        <a asp-action="Edit" asp-route-id="@item.Id">Sửa</a> |
+                        <a asp-action="Delete" asp-route-id="@item.Id">Xóa</a>
+                    </div>
+                }
             </div>
         }
     }
