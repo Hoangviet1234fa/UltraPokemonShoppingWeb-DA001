@@ -32,6 +32,15 @@
                         <span class="badge bg-@(u.IsApproved ? "success" : "warning")">@(u.IsApproved ? "Đã duyệt" : "Chờ duyệt")</span>
                     </td>
                     <td>
+                        <!-- Nút Duyệt: Chỉ hiện khi tài khoản chưa được duyệt và không phải tài khoản admin gốc -->
+                        @if (!u.IsApproved)
+                        {
+                            <form asp-action="Approve" asp-route-id="@u.Id" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-success btn-sm me-1">Duyệt</button>
+                            </form>
+                        }
+
+                        <!-- Nút Xóa  -->
                         @if (u.Email != "admin@ultrapokemon.com")
                         {
                             <a asp-action="Delete" asp-route-id="@u.Id" class="btn btn-danger btn-sm" onclick="return confirm('Bạn có chắc muốn xóa tài khoản này?');">Xóa</a>

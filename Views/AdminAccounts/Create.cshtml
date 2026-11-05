@@ -1,0 +1,14 @@
+﻿@page
+@model UltraPokemon.Views.AdminAccounts.CreateModel
+@{
+}
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <!-- Các ô nhập thông tin như Username, Password... -->
+    <!-- Ô chọn file ảnh -->
+    <div class="form-group">
+        <label>Ảnh đại diện</label>
+        <input type="file" name="imageFile" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Thêm mới</button>
+</form>

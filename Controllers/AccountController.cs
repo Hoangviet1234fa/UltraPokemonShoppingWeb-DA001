@@ -90,11 +90,11 @@ namespace UltraPokemon.Controllers
 
             if (user.Role == "Admin")
             {
-                return RedirectToAction("Index", "AdminDashboard");
+                return RedirectToAction("Index", "AdminAccounts");
             }
             return RedirectToAction("Index", "Home");
         }
-
+        
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

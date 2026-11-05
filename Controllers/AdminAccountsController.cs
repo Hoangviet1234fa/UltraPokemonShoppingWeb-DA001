@@ -16,15 +16,53 @@ namespace UltraPokemon.Controllers
         {
             _context = context;
         }
+        // 1. CREATE (Hiển thị form thêm tài khoản mới)
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View();
+        }
 
-        // 1. READ: Xem danh sách toàn bộ tài khoản trong hệ thống
+        // 1. CREATE (Xử lý lưu tài khoản mới vào CSDL và hỗ trợ up ảnh)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(User user, IFormFile? imageFile)
+        {
+            if (ModelState.IsValid)
+            {
+                // Xử lý upload ảnh nếu người dùng có chọn file
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    // Tạo tên file độc lập bằng Guid để không bị trùng lặp
+                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+
+                    // Đường dẫn lưu vào thư mục wwwroot/images
+                    string uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images", fileName);
+
+                    using (var stream = new FileStream(uploadPath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+
+                    // Lưu đường dẫn ảnh vào database (Giả sử model User của bạn có thuộc tính AvatarUrl hoặc ImageUrl)
+                    user.AvatarUrl = "/images/" + fileName;
+                }
+
+                _context.Add(user);
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
+            }
+            return View(user);
+        }
+
+        // 2. READ: Xem danh sách toàn bộ tài khoản trong hệ thống
         public async Task<IActionResult> Index()
         {
             var accounts = await _context.Users.ToListAsync();
             return View(accounts);
         }
 
-        // 2. UPDATE (Hiển thị form chỉnh sửa tài khoản)
+        // 3. UPDATE (Hiển thị form chỉnh sửa tài khoản)
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
@@ -33,7 +71,7 @@ namespace UltraPokemon.Controllers
             return View(user);
         }
 
-        // 2. UPDATE (Xử lý lưu thông tin chỉnh sửa tài khoản)
+        // 3. UPDATE (Xử lý lưu thông tin chỉnh sửa tài khoản)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, User user)
@@ -57,7 +95,7 @@ namespace UltraPokemon.Controllers
             return View(user);
         }
 
-        // 3. DELETE: Xóa tài khoản khỏi hệ thống
+        // 4. DELETE: Xóa tài khoản khỏi hệ thống
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -66,6 +104,19 @@ namespace UltraPokemon.Controllers
             if (user != null)
             {
                 _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index));
+        }
+        // Hành động duyệt tài khoản
+        [HttpPost]
+        public async Task<IActionResult> Approve(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user != null)
+            {
+                user.IsApproved = true; // Chuyển thành đã duyệt
+                _context.Update(user);
                 await _context.SaveChangesAsync();
             }
             return RedirectToAction(nameof(Index));
