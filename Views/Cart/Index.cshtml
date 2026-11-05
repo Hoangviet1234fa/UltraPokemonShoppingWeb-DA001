@@ -21,14 +21,14 @@
 
 @if (!Model.Any())
 {
-    <div class="alert alert-info">
+    <div class="alert alert-info mt-3">
         Giỏ hàng đang trống.
-        <a asp-controller="Product" asp-action="Index">Tiếp tục mua sắm</a>
+        <a asp-controller="Product" asp-action="Index" class="fw-bold text-decoration-none">Tiếp tục mua sắm</a>
     </div>
 }
 else
 {
-    <table class="table align-middle">
+    <table class="table align-middle mt-3">
         <thead>
             <tr>
                 <th>Thẻ bài</th>
@@ -43,7 +43,11 @@ else
             @foreach (var l in Model)
             {
                 <tr>
-                    <td><a asp-controller="Product" asp-action="Details" asp-route-id="@l.Product.Id">@l.Product.Name</a></td>
+                    <td>
+                        <a asp-controller="Product" asp-action="Details" asp-route-id="@l.Product.Id" class="text-decoration-none fw-bold">
+                            @l.Product.Name
+                        </a>
+                    </td>
                     <td>@l.Product.ElementType</td>
                     <td class="text-end">@l.Product.Price.ToString("N0") VNĐ</td>
                     <td class="text-center">@l.Quantity</td>
@@ -58,28 +62,26 @@ else
             }
         </tbody>
         <tfoot>
-            <tr>
-                <th colspan="4" class="text-end">Tổng cộng</th>
-                <th class="text-end text-danger">@Model.Sum(l => l.Total).ToString("N0") VNĐ</th>
+            <tr class="table-light">
+                <th colspan="4" class="text-end fs-5">Tổng cộng</th>
+                <th class="text-end text-danger fs-5 fw-bold">@Model.Sum(l => l.Total).ToString("N0") VNĐ</th>
                 <th></th>
             </tr>
         </tfoot>
     </table>
 
     <!-- Nhóm các nút điều hướng và thanh toán -->
-    <div class="d-flex justify-content-between align-items-center mt-3">
+    <div class="d-flex justify-content-between align-items-center mt-4">
         <div>
             <form asp-action="Clear" method="post" class="d-inline">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">Xóa toàn bộ giỏ</button>
+                <button type="submit" class="btn btn-outline-secondary">Xóa toàn bộ giỏ</button>
             </form>
-            <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-sm">Tiếp tục mua sắm</a>
+            <a asp-controller="Product" asp-action="Index" class="btn btn-primary ms-2">Tiếp tục mua sắm</a>
         </div>
 
         <div>
-            <form asp-action="Checkout" method="post">
-                <button type="submit" class="btn btn-success btn-lg fw-bold">Xác nhận Thanh toán</button>
-            </form>
+            <!-- ĐÃ SỬA: Đổi từ form POST thành thẻ <a> trỏ đến trang Checkout để điền thông tin khách hàng -->
+            <a asp-action="Checkout" class="btn btn-success btn-lg fw-bold px-4">Xác nhận Thanh toán</a>
         </div>
     </div>
 }
- 
