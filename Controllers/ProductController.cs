@@ -22,9 +22,9 @@ public class ProductController : Controller
         _env = env;
     }
 
-    // ------------------------------------------------------------------
+ 
     // INDEX: Mở công khai cho mọi người xem danh sách, tìm kiếm, lọc
-    // ------------------------------------------------------------------
+ 
     public async Task<IActionResult> Index(string? searchString, string? elementType, string? sortOrder)
     {
         // Danh sách hệ chuẩn lấy từ bảng Categories (dùng cho các nút lọc)

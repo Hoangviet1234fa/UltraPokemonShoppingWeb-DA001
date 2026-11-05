@@ -72,9 +72,9 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ==============================================================
+ 
     // 5. THANH TOÁN & NGHIỆP VỤ TỒN KHO (Phần quan trọng nhất)
-    // ==============================================================
+  
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize] // Bắt buộc người dùng đăng nhập mới được thanh toán
     public async Task<IActionResult> Checkout()
