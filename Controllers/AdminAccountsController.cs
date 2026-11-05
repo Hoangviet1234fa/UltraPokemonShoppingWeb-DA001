@@ -1,101 +1,75 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using UltraPokemon.Data; // Thêm namespace chứa AppDbContext
+using UltraPokemon.Data;
 using UltraPokemon.Models;
 
 namespace UltraPokemon.Controllers
 {
-    // Bắt buộc phân quyền: Chỉ tài khoản có Role là "Admin" mới được truy cập Controller này
+    // YÊU CẦU BẢO MẬT: Chỉ những tài khoản đăng nhập có Role là "Admin" mới được phép truy cập Controller này
     [Authorize(Roles = "Admin")]
     public class AdminAccountsController : Controller
     {
-        private readonly AppDbContext _context; // Đã đổi chuẩn sang AppDbContext
+        private readonly AppDbContext _context;
 
         public AdminAccountsController(AppDbContext context)
         {
             _context = context;
         }
-        // 1. CREATE (Hiển thị form thêm tài khoản mới)
-        [HttpGet]
-        public IActionResult Create()
-        {
-            return View();
-        }
 
-        // 1. CREATE (Xử lý lưu tài khoản mới vào CSDL và hỗ trợ up ảnh)
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(User user, IFormFile? imageFile)
-        {
-            if (ModelState.IsValid)
-            {
-                // Xử lý upload ảnh nếu người dùng có chọn file
-                if (imageFile != null && imageFile.Length > 0)
-                {
-                    // Tạo tên file độc lập bằng Guid để không bị trùng lặp
-                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
-
-                    // Đường dẫn lưu vào thư mục wwwroot/images
-                    string uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images", fileName);
-
-                    using (var stream = new FileStream(uploadPath, FileMode.Create))
-                    {
-                        await imageFile.CopyToAsync(stream);
-                    }
-
-                    // Lưu đường dẫn ảnh vào database (Giả sử model User của bạn có thuộc tính AvatarUrl hoặc ImageUrl)
-                    user.AvatarUrl = "/images/" + fileName;
-                }
-
-                _context.Add(user);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(user);
-        }
-
-        // 2. READ: Xem danh sách toàn bộ tài khoản trong hệ thống
+     
+        // 1. READ: XEM DANH SÁCH TÀI KHOẢN (INDEX)
+      
         public async Task<IActionResult> Index()
         {
+            // Truy vấn lấy toàn bộ danh sách User từ cơ sở dữ liệu
             var accounts = await _context.Users.ToListAsync();
             return View(accounts);
         }
 
-        // 3. UPDATE (Hiển thị form chỉnh sửa tài khoản)
+        
+        // 2. UPDATE: CHỈNH SỬA THÔNG TIN TÀI KHOẢN
+       
+        // GET: Hiển thị form chỉnh sửa
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
+            // Dùng hàm FindAsync để tìm tài khoản dựa trên ID
             var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
+            if (user == null) return NotFound(); // Báo lỗi 404 nếu không tìm thấy ID tài khoản
+
             return View(user);
         }
 
-        // 3. UPDATE (Xử lý lưu thông tin chỉnh sửa tài khoản)
+        // POST: Xử lý dữ liệu form và lưu vào CSDL
         [HttpPost]
-        [ValidateAntiForgeryToken]
+        [ValidateAntiForgeryToken] // Chống tấn công giả mạo yêu cầu chéo trang (CSRF)
         public async Task<IActionResult> Edit(int id, User user)
         {
+            // Đảm bảo ID trên URL khớp với ID của form gửi lên
             if (id != user.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    _context.Update(user);
-                    await _context.SaveChangesAsync();
+                    _context.Update(user); // Đánh dấu đối tượng cần cập nhật
+                    await _context.SaveChangesAsync(); // Lưu thay đổi vào CSDL
                 }
                 catch (DbUpdateConcurrencyException)
                 {
+                    // Xử lý lỗi trong trường hợp tài khoản vừa bị ai đó xóa mất trước khi ta kịp lưu
                     if (!_context.Users.Any(e => e.Id == user.Id)) return NotFound();
                     else throw;
                 }
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Index)); // Chuyển hướng về trang danh sách
             }
-            return View(user);
+            return View(user); // Trả lại form báo lỗi nếu Validation không hợp lệ
         }
 
-        // 4. DELETE: Xóa tài khoản khỏi hệ thống
+       
+        // 3. DELETE: XÓA TÀI KHOẢN (DELETE)
+        
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -103,23 +77,11 @@ namespace UltraPokemon.Controllers
             var user = await _context.Users.FindAsync(id);
             if (user != null)
             {
+                // Thực thi lệnh xóa tài khoản ra khỏi DbSet
                 _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(); // Cập nhật CSDL
             }
-            return RedirectToAction(nameof(Index));
-        }
-        // Hành động duyệt tài khoản
-        [HttpPost]
-        public async Task<IActionResult> Approve(int id)
-        {
-            var user = await _context.Users.FindAsync(id);
-            if (user != null)
-            {
-                user.IsApproved = true; // Chuyển thành đã duyệt
-                _context.Update(user);
-                await _context.SaveChangesAsync();
-            }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index)); // Quay về trang danh sách
         }
     }
 }

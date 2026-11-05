@@ -1,36 +1,61 @@
 @model List<CartLine>
-@{ ViewData["Title"] = "Giỏ hàng"; }
+@{
+    ViewData["Title"] = "Giỏ hàng";
+}
 
 <h2>Giỏ hàng</h2>
 
+<!-- Chỉ giữ lại DUY NHẤT một khối bắt thông báo ở đây để tránh bị lặp -->
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger mt-2">
+        @TempData["Error"]
+    </div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success mt-2">
+        @TempData["Success"]
+    </div>
+}
+
 @if (!Model.Any())
 {
-    <div class="alert alert-info">Giỏ hàng đang trống.
-        <a asp-controller="Product" asp-action="Index">Tiếp tục mua sắm</a></div>
+    <div class="alert alert-info">
+        Giỏ hàng đang trống.
+        <a asp-controller="Product" asp-action="Index">Tiếp tục mua sắm</a>
+    </div>
 }
 else
 {
     <table class="table align-middle">
         <thead>
-            <tr><th>Thẻ bài</th><th>Hệ</th><th class="text-end">Đơn giá</th><th class="text-center">SL</th><th class="text-end">Thành tiền</th><th></th></tr>
+            <tr>
+                <th>Thẻ bài</th>
+                <th>Hệ</th>
+                <th class="text-end">Đơn giá</th>
+                <th class="text-center">SL</th>
+                <th class="text-end">Thành tiền</th>
+                <th></th>
+            </tr>
         </thead>
         <tbody>
-        @foreach (var l in Model)
-        {
-            <tr>
-                <td><a asp-controller="Product" asp-action="Details" asp-route-id="@l.Product.Id">@l.Product.Name</a></td>
-                <td>@l.Product.ElementType</td>
-                <td class="text-end">@l.Product.Price.ToString("N0") VNĐ</td>
-                <td class="text-center">@l.Quantity</td>
-                <td class="text-end">@l.Total.ToString("N0") VNĐ</td>
-                <td class="text-end">
-                    <form asp-action="Remove" method="post">
-                        <input type="hidden" name="id" value="@l.Product.Id" />
-                        <button type="submit" class="btn btn-outline-danger btn-sm">Xóa</button>
-                    </form>
-                </td>
-            </tr>
-        }
+            @foreach (var l in Model)
+            {
+                <tr>
+                    <td><a asp-controller="Product" asp-action="Details" asp-route-id="@l.Product.Id">@l.Product.Name</a></td>
+                    <td>@l.Product.ElementType</td>
+                    <td class="text-end">@l.Product.Price.ToString("N0") VNĐ</td>
+                    <td class="text-center">@l.Quantity</td>
+                    <td class="text-end">@l.Total.ToString("N0") VNĐ</td>
+                    <td class="text-end">
+                        <form asp-action="Remove" method="post">
+                            <input type="hidden" name="id" value="@l.Product.Id" />
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+            }
         </tbody>
         <tfoot>
             <tr>
@@ -41,8 +66,20 @@ else
         </tfoot>
     </table>
 
-    <form asp-action="Clear" method="post" class="d-inline">
-        <button type="submit" class="btn btn-outline-secondary btn-sm">Xóa toàn bộ giỏ</button>
-    </form>
-    <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-sm">Tiếp tục mua sắm</a>
+    <!-- Nhóm các nút điều hướng và thanh toán -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div>
+            <form asp-action="Clear" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Xóa toàn bộ giỏ</button>
+            </form>
+            <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-sm">Tiếp tục mua sắm</a>
+        </div>
+
+        <div>
+            <form asp-action="Checkout" method="post">
+                <button type="submit" class="btn btn-success btn-lg fw-bold">Xác nhận Thanh toán</button>
+            </form>
+        </div>
+    </div>
 }
+ 
