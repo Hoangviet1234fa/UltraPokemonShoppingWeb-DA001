@@ -6,10 +6,10 @@ namespace UltraPokemon.Models
     // Việc dùng Enum giúp code chuyên nghiệp, dễ quản lý trạng thái và không sợ gõ sai chính tả.
     public enum OrderStatus
     {
-        Pending,   // Mặc định khi khách vừa đặt hàng: Chờ duyệt
-        Shipping,  // Khi Admin bấm duyệt: Đang giao hàng
-        Completed, // Hoàn thành
-        Cancelled  // Đơn hàng bị hủy
+        Pending = 0,    // Chờ duyệt
+        Shipping = 1,   // Đang giao
+        Completed = 2,  // Hoàn thành
+        Cancelled = 3   // Đã hủy 
     }
 
     public class Order

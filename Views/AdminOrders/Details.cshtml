@@ -45,6 +45,7 @@
                     <div>
                         <p class="mb-2">
                             <strong>Trạng thái hiện tại:</strong>
+                            <!-- ĐÃ BỔ SUNG TRẠNG THÁI ĐÃ HỦY VÀO PHẦN HIỂN THỊ -->
                             @if ((int)Model.Status == 0)
                             {
                                 <span class="badge bg-warning text-dark fs-6">Chờ duyệt</span>
@@ -53,9 +54,13 @@
                             {
                                 <span class="badge bg-info text-dark fs-6">Đang giao</span>
                             }
-                            else
+                            else if ((int)Model.Status == 2)
                             {
                                 <span class="badge bg-success fs-6">Hoàn thành</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger fs-6">Đã hủy</span>
                             }
                         </p>
                         <p class="fs-5"><strong>Tổng thanh toán:</strong> <span class="text-danger fw-bold">@Convert.ToDecimal(Model.TotalAmount).ToString("N0") VNĐ</span></p>
@@ -66,10 +71,12 @@
                         <input type="hidden" name="id" value="@Model.Id" />
                         <label class="form-label fw-bold">Cập nhật trạng thái mới:</label>
                         <div class="input-group">
+                            <!-- ĐÃ BỔ SUNG OPTION "ĐÃ HỦY" (value="3") VÀO DROPDOWN -->
                             <select name="newStatus" class="form-select">
                                 <option value="0" selected="@((int)Model.Status == 0)">Chờ duyệt</option>
                                 <option value="1" selected="@((int)Model.Status == 1)">Đang giao</option>
                                 <option value="2" selected="@((int)Model.Status == 2)">Hoàn thành</option>
+                                <option value="3" selected="@((int)Model.Status == 3)" class="text-danger fw-bold">Đã hủy</option>
                             </select>
                             <button type="submit" class="btn btn-success">Lưu thay đổi</button>
                         </div>

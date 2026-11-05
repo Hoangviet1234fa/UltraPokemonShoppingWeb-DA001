@@ -45,16 +45,17 @@
                         <!-- Hiển thị tổng tiền có dấu phân cách hàng nghìn (N0) -->
                         <td class="text-danger fw-bold">@Convert.ToDecimal(item.TotalAmount).ToString("N0") VNĐ</td>
 
-                        <!-- Cột Trạng thái kèm form cập nhật trực tiếp (Chờ duyệt / Đang giao / Hoàn thành) -->
+                        <!-- Cột Trạng thái kèm form cập nhật trực tiếp -->
                         <td>
                             <form asp-action="UpdateStatus" method="post" class="d-flex align-items-center">
                                 <input type="hidden" name="id" value="@item.Id" />
 
-                                <!-- Sử dụng name="newStatus" khớp tuyệt đối với tham số của hàm trong AdminOrdersController -->
+                                <!-- ĐÃ BỔ SUNG TRẠNG THÁI "ĐÃ HỦY" (value="3") ĐỂ KHỚP VỚI CONTROLLER -->
                                 <select name="newStatus" class="form-select form-select-sm me-2" style="width: 150px;">
                                     <option value="0" selected="@((int)item.Status == 0)">Chờ duyệt</option>
                                     <option value="1" selected="@((int)item.Status == 1)">Đang giao</option>
                                     <option value="2" selected="@((int)item.Status == 2)">Hoàn thành</option>
+                                    <option value="3" selected="@((int)item.Status == 3)" class="text-danger fw-bold">Đã hủy</option>
                                 </select>
 
                                 <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
