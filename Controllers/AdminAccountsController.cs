@@ -16,10 +16,47 @@ namespace UltraPokemon.Controllers
         {
             _context = context;
         }
+        // 1. CREATE (Hiển thị form thêm tài khoản mới)
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View();
+        }
 
-     
+        // 1. CREATE (Xử lý lưu tài khoản mới vào CSDL và hỗ trợ up ảnh)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(User user, IFormFile? imageFile)
+        {
+            if (ModelState.IsValid)
+            {
+                // 1. Xử lý upload ảnh nếu người dùng có chọn file
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+                    string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images", fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+
+                    // Gán đường dẫn ảnh vào thuộc tính của user (tùy thuộc vào tên trường trong Model của bạn)
+                    user.AvatarUrl = "/images/" + fileName;
+                }
+
+                // 2. Thêm vào cơ sở dữ liệu và lưu lại bất đồng bộ
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync(); // Giúp khắc phục cảnh báo CS1998
+
+                // 3. TRẢ VỀ KẾT QUẢ KHI THÀNH CÔNG (Khắc phục lỗi CS0161)
+                return RedirectToAction(nameof(Index));
+            }
+
+            // 4. TRẢ VỀ KẾT QUẢ KHI DỮ LIỆU KHÔNG HỢP LỆ (Bắt buộc phải có để phủ kín các nhánh logic)
+            return View(user);
+        }        
         // 1. READ: XEM DANH SÁCH TÀI KHOẢN (INDEX)
-      
         public async Task<IActionResult> Index()
         {
             // Truy vấn lấy toàn bộ danh sách User từ cơ sở dữ liệu
@@ -82,6 +119,19 @@ namespace UltraPokemon.Controllers
                 await _context.SaveChangesAsync(); // Cập nhật CSDL
             }
             return RedirectToAction(nameof(Index)); // Quay về trang danh sách
+        }
+        // Hành động duyệt tài khoản
+        [HttpPost]
+        public async Task<IActionResult> Approve(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user != null)
+            {
+                user.IsApproved = true; // Chuyển thành đã duyệt
+                _context.Update(user);
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index));
         }
     }
 }

@@ -103,4 +103,74 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
+<body>
+    <!-- 1. VIDEO NỀN (BACKGROUND VIDEO) -->
+    <<!-- VIDEO NỀN CỐ ĐỊNH -->
+    <div class="video-background-container">
+        <video autoplay muted loop playsinline class="bg-video">
+            <source src="~/videos/bg-video.mp4" type="video/mp4" />
+            Trình duyệt của bạn không hỗ trợ thẻ video.
+        </video>
+        <div class="video-overlay"></div>
+    </div>
+
+    <!-- 2. ĐỐM SÁNG DI CHUYỂN THEO CHUỘT (MOUSE GLOW) -->
+    <div class="mouse-glow"></div>
+
+    <!-- 3. NỘI DUNG CHÍNH CỦA TRANG WEB -->
+    <div class="main-content-wrapper">
+        <header>
+            <!-- Thanh Navbar / Menu của bạn ở đây -->
+        </header>
+
+        <div class="container">
+            @RenderBody()
+        </div>
+
+        <footer>
+            <!-- Footer của bạn -->
+        </footer>
+    </div>
+    <script>
+        const glow = document.querySelector('.mouse-glow');
+
+        // Bắt sự kiện di chuyển chuột trên toàn màn hình
+        window.addEventListener('mousemove', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+
+            // Cập nhật vị trí đốm sáng theo tọa độ con trỏ chuột
+            glow.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+        });
+
+        // Hiệu ứng phóng to đốm sáng khi rê chuột vào các nút bấm hoặc thẻ sản phẩm (Card)
+        const interactiveItems = document.querySelectorAll('button, .card, a, input');
+
+        interactiveItems.forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                glow.style.width = '550px';
+                glow.style.height = '550px';
+            });
+            item.addEventListener('mouseleave', () => {
+                glow.style.width = '400px';
+                glow.style.height = '400px';
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const glow = document.querySelector('.mouse-glow');
+
+            if (glow) {
+                window.addEventListener('mousemove', function (e) {
+                    const x = e.clientX;
+                    const y = e.clientY;
+
+                    // Dùng translate để dịch chuyển tâm của đốm sáng khớp hoàn toàn với con trỏ chuột
+                    glow.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+                });
+            }
+        });
+    </script>
+</body>
 </html>

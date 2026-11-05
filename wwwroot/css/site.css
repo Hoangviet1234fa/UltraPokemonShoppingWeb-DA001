@@ -38,3 +38,52 @@ body { margin-bottom: 60px; }
     to   { background-position: -50% 0; }
 }
 .detail-card-wrap { position: relative; }
+/* --- 1. CSS CHO VIDEO NỀN CỐ ĐỊNH --- */
+.video-background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    z-index: -999; /* Đảm bảo video luôn nằm ở lớp sâu nhất, không che khuất nội dung */
+}
+
+.bg-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Giúp video tràn màn hình mà không bị méo hình */
+}
+
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6); /* Lớp phủ màu đen mờ 60% giúp chữ đọc rõ hơn */
+}
+
+/* --- HIỆU ỨNG ÁNH ĐÈN VÀNG ÓNG THEO CHUỘT --- */
+.mouse-glow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 450px;
+    height: 450px;
+    /* Dùng dải màu từ vàng óng rực rỡ lan tỏa ra trong suốt */
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.35) 0%, rgba(255, 165, 0, 0.15) 40%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+    z-index: 9999;
+}
+
+/* Đảm bảo nội dung trang web hiển thị nổi lên trên */
+.main-content-wrapper {
+    position: relative;
+    z-index: 1;
+}
+
+
