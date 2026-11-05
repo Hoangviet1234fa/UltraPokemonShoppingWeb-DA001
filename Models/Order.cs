@@ -30,9 +30,9 @@ namespace UltraPokemon.Models
         // Trạng thái hiện tại của đơn hàng (Sử dụng cấu trúc Enum ở trên)
         public OrderStatus Status { get; set; }
 
-        // ==========================================================
+       
         // CÁC TRƯỜNG THÔNG TIN MỚI THÊM ĐỂ ĐÁP ỨNG FORM THANH TOÁN
-        // ==========================================================
+        
 
         [Required(ErrorMessage = "Họ tên người nhận không được để trống")]
         [StringLength(100)] // Giới hạn độ dài để tối ưu CSDL
@@ -48,7 +48,7 @@ namespace UltraPokemon.Models
         [Required]
         public string PaymentMethod { get; set; } = "Tiền mặt"; // Phương thức thanh toán (Momo, Ngân hàng, Visa...)
 
-        // ==========================================================
+       
 
         // Quan hệ 1 - Nhiều (1-N) trong Entity Framework: 
         // Một Hóa đơn (Order) có thể chứa nhiều Chi tiết món hàng (OrderDetail).
