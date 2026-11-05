@@ -6,18 +6,47 @@
              onerror="this.onerror=null;this.src=this.dataset.fallback;" data-fallback="@ImageHelper.Placeholder(Model)"
              class="card-img-top" alt="@Model.Name" style="height: 250px; object-fit: contain; padding: 10px;" />
     </a>
-    <div class="card-body text-center">
+    <div class="card-body text-center d-flex flex-column">
         <h5 class="card-title">
             <a asp-controller="Product" asp-action="Details" asp-route-id="@Model.Id" class="text-decoration-none text-dark">@Model.Name</a>
         </h5>
-        <p class="badge bg-@ElementHelper.Color(Model.ElementType) @(ElementHelper.Color(Model.ElementType) == "warning" ? "text-dark" : "")">@Model.ElementType</p>
+
+        <div>
+            <p class="badge bg-@ElementHelper.Color(Model.ElementType) @(ElementHelper.Color(Model.ElementType) == "warning" ? "text-dark" : "")">@Model.ElementType</p>
+        </div>
+
         <p class="mb-1 small text-muted">⚡ Sức mạnh: <strong>@Model.Power</strong></p>
-        <p class="card-text text-danger fw-bold">@Model.Price.ToString("N0") VNĐ</p>
-        <a asp-controller="Product" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Xem chi tiết</a>
-        <form asp-controller="Cart" asp-action="Add" method="post" class="d-inline">
-            <input type="hidden" name="id" value="@Model.Id" />
-            <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-            <button type="submit" class="btn btn-sm btn-success">Thêm vào giỏ</button>
-        </form>
+        <p class="card-text text-danger fw-bold mb-1">@Model.Price.ToString("N0") VNĐ</p>
+
+        <!-- ĐOẠN MỚI THÊM: HIỂN THỊ SỐ LƯỢNG TỒN KHO -->
+        <div class="mb-3" style="font-size: 0.85rem;">
+            @if (Model.Stock > 0)
+            {
+                <span class="text-success fw-semibold">Kho còn: @Model.Stock lá</span>
+            }
+            else
+            {
+                <span class="badge bg-danger">Hết hàng</span>
+            }
+        </div>
+
+        <!-- CÁC NÚT THAO TÁC (TỰ ĐỘNG ĐẨY XUỐNG ĐÁY THẺ BÀI) -->
+        <div class="mt-auto d-flex justify-content-center gap-2">
+            <a asp-controller="Product" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Xem chi tiết</a>
+
+            <!-- Logic: Khóa nút thêm giỏ hàng nếu kho bằng 0 -->
+            @if (Model.Stock > 0)
+            {
+                <form asp-controller="Cart" asp-action="Add" method="post" class="m-0">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                    <button type="submit" class="btn btn-sm btn-success">Thêm vào giỏ</button>
+                </form>
+            }
+            else
+            {
+                <button class="btn btn-sm btn-secondary" disabled>Hết hàng</button>
+            }
+        </div>
     </div>
 </div>

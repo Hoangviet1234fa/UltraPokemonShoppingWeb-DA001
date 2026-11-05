@@ -1,32 +1,54 @@
-@model Product
+@model UltraPokemon.Models.Product
 
-<div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
+<!-- 1. Tên thẻ bài -->
 <div class="mb-3">
     <label asp-for="Name" class="form-label fw-bold">Tên thẻ bài</label>
-    <input asp-for="Name" class="form-control" />
+    <input asp-for="Name" class="form-control" placeholder="Ví dụ: Charizard VMAX..." />
     <span asp-validation-for="Name" class="text-danger"></span>
 </div>
-<div class="mb-3">
-    <label asp-for="ElementType" class="form-label fw-bold">Hệ</label>
-    <select asp-for="ElementType" asp-items="(SelectList)ViewBag.ElementList" class="form-select"></select>
-</div>
+
 <div class="row">
-    <div class="col-6 mb-3">
-        <label asp-for="Power" class="form-label fw-bold">Sức mạnh</label>
-        <input asp-for="Power" class="form-control" />
+    <!-- 2. Hệ của thẻ bài -->
+    <div class="col-md-6 mb-3">
+        <label asp-for="ElementType" class="form-label fw-bold">Hệ (Element)</label>
+        <input asp-for="ElementType" class="form-control" placeholder="Ví dụ: Fire, Water, Electric..." />
+        <span asp-validation-for="ElementType" class="text-danger"></span>
     </div>
-    <div class="col-6 mb-3">
-        <label asp-for="Price" class="form-label fw-bold">Giá (VNĐ)</label>
-        <input asp-for="Price" class="form-control" />
+
+    <!-- 3. Chỉ số Sức mạnh -->
+    <div class="col-md-6 mb-3">
+        <label asp-for="Power" class="form-label fw-bold">Sức mạnh (HP / Power)</label>
+        <!-- type="number" giúp giao diện hiển thị bộ đếm số, min="0" ngăn nhập số âm -->
+        <input asp-for="Power" type="number" min="0" class="form-control" placeholder="Ví dụ: 120" />
+        <span asp-validation-for="Power" class="text-danger"></span>
     </div>
 </div>
-<div class="mb-3">
-    <label asp-for="Description" class="form-label fw-bold">Mô tả</label>
-    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+
+<div class="row">
+    <!-- 4. Giá bán -->
+    <div class="col-md-6 mb-3">
+        <label asp-for="Price" class="form-label fw-bold">Giá bán (VNĐ)</label>
+        <input asp-for="Price" type="number" min="0" class="form-control" placeholder="Ví dụ: 50000" />
+        <span asp-validation-for="Price" class="text-danger"></span>
+    </div>
+
+    
+    <!-- NHẬP SỐ LƯỢNG TỒN KHO -->
+    <
+    <div class="col-md-6 mb-3">
+        <label asp-for="Stock" class="form-label fw-bold text-success">Số lượng tồn kho</label>
+        <!-- Đổi viền input thành màu xanh (border-success) để Admin dễ chú ý khi nhập kho -->
+        <input asp-for="Stock" type="number" min="0" class="form-control border-success bg-light" placeholder="Số lượng lá bài có sẵn..." />
+        <!-- Nếu Admin bỏ trống, MVC sẽ tự động hiển thị lỗi màu đỏ tại thẻ span này -->
+        <span asp-validation-for="Stock" class="text-danger fw-bold"></span>
+    </div>
 </div>
-<div class="mb-3">
-    <label class="form-label fw-bold">Ảnh thẻ bài (png, jpg, webp, gif - tối đa 5 MB)</label>
-    <input type="file" name="imageFile" class="form-control" accept="image/*" />
-    <span class="text-danger field-validation-error">@Html.ValidationMessage("imageFile")</span>
+
+<!-- 6. Khu vực Hình ảnh -->
+<!-- LƯU Ý: Nếu dự án của bạn đang dùng cơ chế Upload File (chọn file từ máy tính) thay vì nhập Link,
+     hãy thay thế riêng đoạn div ImageUrl này bằng thẻ <input type="file" ...> cũ của bạn -->
+<div class="mb-4">
+    <label asp-for="ImageUrl" class="form-label fw-bold">Hình ảnh thẻ bài (URL)</label>
+    <input asp-for="ImageUrl" class="form-control" placeholder="Nhập đường dẫn ảnh..." />
+    <span asp-validation-for="ImageUrl" class="text-danger"></span>
 </div>
