@@ -17,8 +17,9 @@ namespace UltraPokemon.Controllers
             _context = context;
         }
 
+        // ========================================================
         // 1. READ: XEM DANH SÁCH TOÀN BỘ HÓA ĐƠN (INDEX)
-        
+        // ========================================================
         public async Task<IActionResult> Index()
         {
             // Dùng LINQ lấy danh sách đơn hàng, sắp xếp các đơn mới đặt lên đầu danh sách
@@ -28,9 +29,9 @@ namespace UltraPokemon.Controllers
             return View(orders);
         }
 
-        
+        // ========================================================
         // 2. READ: XEM CHI TIẾT ĐƠN HÀNG VÀ CÁC MÓN HÀNG KHÁCH MUA
-      
+        // ========================================================
         public async Task<IActionResult> Details(int id)
         {
             // Dùng LINQ kết hợp Include và ThenInclude (Eager Loading) để lấy Hóa đơn kèm theo Chi tiết Hóa đơn và thông tin Sản phẩm
@@ -44,9 +45,9 @@ namespace UltraPokemon.Controllers
             return View(order);
         }
 
-
+        // ========================================================
         // 3. UPDATE: CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG (NGHIỆP VỤ CỐT LÕI)
-        
+        // ========================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateStatus(int id, OrderStatus newStatus)
@@ -62,13 +63,13 @@ namespace UltraPokemon.Controllers
 
             TempData["Success"] = $"Đã cập nhật trạng thái đơn hàng #{order.Id} thành công!";
 
-            // Cập nhật xong chuyển hướng về trang danh sách đơn hàng
-            return RedirectToAction(nameof(Index));
+            // Cập nhật xong, chuyển hướng quay lại chính trang Chi tiết (Details) của đơn hàng đó
+            return RedirectToAction(nameof(Details), new { id = id });
         }
 
-       
+        // ========================================================
         // 4. DELETE: XÓA HÓA ĐƠN KHỎI HỆ THỐNG
-      
+        // ========================================================
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

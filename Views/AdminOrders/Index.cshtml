@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <h2 class="mb-4 text-primary">Quản lý Đơn hàng</h2>
 
-    <!-- Thông báo lỗi hoặc thành công -->
+    <!-- Khối hiển thị thông báo lỗi hoặc thành công từ hệ thống -->
     @if (TempData["Success"] != null)
     {
         <div class="alert alert-success">@TempData["Success"]</div>
@@ -17,6 +17,7 @@
     }
 
     <div class="table-responsive">
+        <!-- Bảng hiển thị danh sách toàn bộ hóa đơn của khách hàng -->
         <table class="table table-bordered table-hover align-middle">
             <thead class="table-dark">
                 <tr>
@@ -25,23 +26,31 @@
                     <th>Ngày đặt</th>
                     <th>Tổng tiền</th>
                     <th>Trạng thái & Cập nhật</th>
-                    <th>Thao tác</th> <!-- Đã bổ sung cột Thao tác -->
+                    <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var item in Model)
                 {
                     <tr>
+                        <!-- Hiển thị mã đơn hàng dạng #ID -->
                         <td class="fw-bold">#@item.Id</td>
+
+                        <!-- Hiển thị email người đặt -->
                         <td>@item.UserEmail</td>
+
+                        <!-- Định dạng ngày giờ đặt hàng chuẩn Việt Nam -->
                         <td>@item.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+
+                        <!-- Hiển thị tổng tiền có dấu phân cách hàng nghìn (N0) -->
                         <td class="text-danger fw-bold">@Convert.ToDecimal(item.TotalAmount).ToString("N0") VNĐ</td>
+
+                        <!-- Cột Trạng thái kèm form cập nhật trực tiếp (Chờ duyệt / Đang giao / Hoàn thành) -->
                         <td>
-                            <!-- Form Cập nhật trạng thái -->
                             <form asp-action="UpdateStatus" method="post" class="d-flex align-items-center">
                                 <input type="hidden" name="id" value="@item.Id" />
 
-                                <!-- Đã sửa name="status" thành name="newStatus" để khớp 100% với Controller -->
+                                <!-- Sử dụng name="newStatus" khớp tuyệt đối với tham số của hàm trong AdminOrdersController -->
                                 <select name="newStatus" class="form-select form-select-sm me-2" style="width: 150px;">
                                     <option value="0" selected="@((int)item.Status == 0)">Chờ duyệt</option>
                                     <option value="1" selected="@((int)item.Status == 1)">Đang giao</option>
@@ -51,10 +60,14 @@
                                 <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
                             </form>
                         </td>
+
+                        <!-- Cột Thao tác: Xem chi tiết hóa đơn hoặc Xóa đơn hàng -->
                         <td>
-                            <!-- Đã bổ sung 2 nút Xem chi tiết và Xóa để không lãng phí code Controller bạn đã viết -->
                             <div class="d-flex gap-1">
+                                <!-- Nút chuyển hướng sang trang Details để xem các lá bài cụ thể trong đơn -->
                                 <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm text-white">Chi tiết</a>
+
+                                <!-- Form xóa đơn hàng có hộp thoại JavaScript xác nhận trước khi xóa -->
                                 <form asp-action="Delete" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đơn hàng này?');">
                                     <input type="hidden" name="id" value="@item.Id" />
                                     <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
