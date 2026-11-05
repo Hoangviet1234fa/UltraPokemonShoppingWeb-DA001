@@ -1,44 +1,70 @@
 ﻿@model IEnumerable<UltraPokemon.Models.User>
 
+@{
+    // Gán tiêu đề cho trang
+    ViewData["Title"] = "Quản lý tài khoản";
+}
+
 <div class="container mt-4">
-    <h2>Quản lý tài khoản người dùng (Admin Panel)</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Quản lý tài khoản người dùng (Admin Panel)</h2>
+    </div>
     <hr />
 
+    <!-- Hiển thị thông báo thành công nếu có (khi sửa/xóa xong) -->
     @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success">@TempData["Success"]</div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     }
 
-    <table class="table table-bordered table-striped">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Email</th>
-                <th>Quyền hạn (Role)</th>
-                <th>Trạng thái duyệt</th>
-                <th>Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var u in Model)
-            {
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle shadow-sm">
+            <thead class="table-dark text-center">
                 <tr>
-                    <td>@u.Id</td>
-                    <td>@u.Email</td>
-                    <td>
-                        <span class="badge bg-@(u.Role == "Admin" ? "danger" : "primary")">@u.Role</span>
-                    </td>
-                    <td>
-                        <span class="badge bg-@(u.IsApproved ? "success" : "warning")">@(u.IsApproved ? "Đã duyệt" : "Chờ duyệt")</span>
-                    </td>
-                    <td>
-                        @if (u.Email != "admin@ultrapokemon.com")
-                        {
-                            <a asp-action="Delete" asp-route-id="@u.Id" class="btn btn-danger btn-sm" onclick="return confirm('Bạn có chắc muốn xóa tài khoản này?');">Xóa</a>
-                        }
-                    </td>
+                    <th style="width: 5%">ID</th>
+                    <th>Email</th>
+                    <th style="width: 15%">Quyền hạn (Role)</th>
+                    <th style="width: 15%">Trạng thái</th>
+                    <th style="width: 15%">Thao tác</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    <tr class="text-center">
+                        <td>@u.Id</td>
+                        <td class="text-start fw-bold">@u.Email</td>
+                        <td>
+                            <!-- Đổi màu huy hiệu (Badge) tự động theo Role -->
+                            <span class="badge bg-@(u.Role == "Admin" ? "danger" : "primary")">@u.Role</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-@(u.IsApproved ? "success" : "warning text-dark")">
+                                @(u.IsApproved ? "Đã duyệt" : "Chờ duyệt")
+                            </span>
+                        </td>
+                        <td>
+                            @if (u.Email != User.Identity?.Name && u.Email != "admin@ultrapokemon.com")
+                            {
+                                <!-- BẮT BUỘC SỬ DỤNG FORM ĐỂ GỬI YÊU CẦU POST KÈM ANTIFORGERY TOKEN -->
+                                <form asp-action="Delete" asp-route-id="@u.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản @u.Email không?');">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="bi bi-trash"></i> Xóa
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <!-- Không cho phép tự xóa chính mình hoặc tài khoản Admin gốc -->
+                                <span class="text-muted small"><em>Không thể xóa</em></span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>

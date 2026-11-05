@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UltraPokemon.Data;
@@ -54,6 +55,78 @@ public class CartController : Controller
     public IActionResult Clear()
     {
         CartSession.Save(HttpContext.Session, new Dictionary<int, int>());
+        return RedirectToAction(nameof(Index));
+    }
+
+    //  THANH TOÁN & TỒN KHO
+    
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize] // Bắt buộc khách hàng phải đăng nhập mới được thanh toán
+    public async Task<IActionResult> Checkout()
+    {
+        var cart = CartSession.Get(HttpContext.Session);
+        if (!cart.Any())
+        {
+            TempData["Error"] = "Giỏ hàng của bạn đang trống!";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Lấy danh sách sản phẩm trong giỏ hàng từ DB (Không dùng AsNoTracking vì cần Update tồn kho)
+        var ids = cart.Keys.ToList();
+        var products = await _db.Products.Where(p => ids.Contains(p.Id)).ToListAsync();
+
+        // 1. BUSINESS LOGIC: KIỂM TRA TỒN KHO TRƯỚC KHI LƯU
+        foreach (var p in products)
+        {
+            var buyQuantity = cart[p.Id];
+            if (buyQuantity > p.Stock)
+            {
+                TempData["Error"] = $"Lỗi: Sản phẩm \"{p.Name}\" chỉ còn {p.Stock} lá. Vui lòng giảm số lượng!";
+                return RedirectToAction(nameof(Index)); // Quay lại giỏ hàng và báo lỗi
+            }
+        }
+
+        // 2. TẠO HÓA ĐƠN (ORDER)
+        var order = new Order
+        {
+            UserEmail = User.Identity!.Name!, // Lấy Email người đang đăng nhập
+            OrderDate = DateTime.Now,
+            Status = OrderStatus.Pending, // Chờ duyệt
+
+            // Dùng LINQ tính tổng tiền: Lấy Giá (chuyển đổi nếu cần) nhân với Số lượng
+            TotalAmount = products.Sum(p => Convert.ToDecimal(p.Price) * cart[p.Id])
+        };
+
+        _db.Orders.Add(order);
+        await _db.SaveChangesAsync(); // Lưu để EF Core tự sinh ra mã OrderId
+
+        // 3. TẠO CHI TIẾT HÓA ĐƠN & TRỪ TỒN KHO
+        foreach (var p in products)
+        {
+            var buyQuantity = cart[p.Id];
+
+            // 3.1 Thêm dữ liệu vào bảng OrderDetail
+            var orderDetail = new OrderDetail
+            {
+                OrderId = order.Id,
+                ProductId = p.Id,
+                Quantity = buyQuantity,
+                UnitPrice = Convert.ToDecimal(p.Price)
+            };
+            _db.OrderDetails.Add(orderDetail);
+
+            // 3.2 BUSINESS LOGIC: TRỪ SỐ LƯỢNG TỒN KHO
+            p.Stock -= buyQuantity;
+            _db.Products.Update(p);
+        }
+
+        // 4. LƯU TOÀN BỘ THAY ĐỔI
+        await _db.SaveChangesAsync();
+
+        // 5. LÀM SẠCH GIỎ HÀNG SAU KHI THÀNH CÔNG
+        CartSession.Save(HttpContext.Session, new Dictionary<int, int>());
+
+        TempData["Success"] = "Đặt hàng thành công! Đơn hàng của bạn đang chờ duyệt.";
         return RedirectToAction(nameof(Index));
     }
 }
