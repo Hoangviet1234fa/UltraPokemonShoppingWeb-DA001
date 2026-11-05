@@ -3,41 +3,57 @@
 @using UltraPokemon.Models
 @using UltraPokemon.Helpers
 @inject IWebHostEnvironment Env
-
+<!-- ^ Phần trên: Khai báo Model dữ liệu (Product) mà View này sử dụng, nạp các thư viện cần thiết và tiêm (inject) môi trường web để xử lý đường dẫn ảnh -->
 @{
-    ViewData["Title"] = "Chi tiết - " + Model.Name;
+    // Khối mã C# xử lý logic trước khi hiển thị giao diện
+    ViewData["Title"] = "Chi tiết - " + Model.Name; // Đặt tiêu đề cho tab trình duyệt
+
+    // Lấy danh sách các thẻ bài liên quan từ ViewBag, nếu không có thì gán danh sách rỗng để tránh lỗi Null
     var related = ViewBag.Related as List<Product> ?? new List<Product>();
+
+    // Gọi Helper để lấy màu sắc Bootstrap tương ứng với Hệ (Ví dụ: Fire -> danger (đỏ), Water -> info (xanh dương))
     var color = ElementHelper.Color(Model.ElementType);
+
+    // Tính toán phần trăm thanh sức mạnh (Power) tối đa là 200 để làm thanh Progress Bar
     var powerPct = Math.Min(100, (int)Math.Round(Model.Power / 200.0 * 100));
 }
 
 <div class="container mt-4">
+    <!-- Nút quay lại trang trước -->
     <a asp-action="Index" class="btn btn-secondary mb-3">&larr; Quay lại danh sách</a>
 
     <div class="row">
-        <!-- Hình ảnh lớn -->
+       
+        <!-- CỘT TRÁI: HIỂN THỊ HÌNH ẢNH SẢN PHẨM      -->
+        
         <div class="col-md-5 text-center">
             <div class="detail-card-wrap card-sparkle d-inline-block rounded">
+                <!-- Xử lý ảnh: ImageHelper tạo đường dẫn chuẩn. onerror giúp tự động tải ảnh mặc định (fallback) nếu file ảnh bị lỗi hoặc mất -->
                 <img src="@ImageHelper.Resolve(Env, Model)"
                      onerror="this.onerror=null;this.src=this.dataset.fallback;" data-fallback="@ImageHelper.Placeholder(Model)"
                      alt="@Model.Name" class="img-fluid rounded shadow" style="max-height: 480px;" />
             </div>
         </div>
 
-        <!-- Giá, Hệ, Sức mạnh -->
+       
+        <!-- CỘT PHẢI: HIỂN THỊ THÔNG TIN & CHỨC NĂNG   -->
+        
         <div class="col-md-7">
             <h2>@Model.Name</h2>
             <hr />
+            <!-- Hiển thị giá tiền định dạng có dấu phẩy phân cách hàng nghìn (N0) -->
             <h3 class="text-danger fw-bold mb-3">Giá: @Model.Price.ToString("N0") VNĐ</h3>
 
             <ul class="list-group list-group-flush mb-4">
                 <li class="list-group-item">
                     <strong>Hệ:</strong>
+                    <!-- Màu nền badge thay đổi linh hoạt theo biến 'color' đã tính ở trên -->
                     <span class="badge bg-@color @(color == "warning" ? "text-dark" : "")">@Model.ElementType</span>
                 </li>
                 <li class="list-group-item">
                     <strong>Chỉ số sức mạnh (Power):</strong> <span class="badge bg-danger">⚡ @Model.Power HP / ATK</span>
                     <div class="progress mt-2" style="height: 10px;">
+                        <!-- Độ dài của thanh progress-bar được điều chỉnh bằng biến powerPct -->
                         <div class="progress-bar bg-@color" role="progressbar" style="width: @(powerPct)%"></div>
                     </div>
                 </li>
@@ -48,22 +64,43 @@
                 <p>@Model.Description</p>
             </div>
 
-            <form asp-controller="Cart" asp-action="Add" method="post" class="d-inline">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
-                <button type="submit" class="btn btn-success btn-lg mt-3">Thêm vào giỏ hàng</button>
-            </form>
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary mt-3 ms-2">Sửa</a>
+            <!-- Gom nhóm các nút bấm hành động (Action Buttons) -->
+            <div class="d-flex align-items-center mt-3">
+
+                <!-- 1. FORM THÊM GIỎ HÀNG: Gửi POST Request chứa ID sản phẩm lên CartController -->
+                <form asp-controller="Cart" asp-action="Add" method="post" class="d-inline">
+                    <!-- Các input type="hidden" dùng để truyền ngầm dữ liệu lên server mà không hiện ra cho người dùng thấy -->
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+                    <button type="submit" class="btn btn-success btn-lg">Thêm vào giỏ hàng</button>
+                </form>
+
+                <!-- 2. NÚT SỬA SẢN PHẨM (CHỈ DÀNH CHO ADMIN) -->
+                <!-- LOGIC BẢO MẬT: Kiểm tra xem User đã đăng nhập chưa VÀ có nằm trong quyền "Admin" không.
+                     Nếu đúng Admin thì mới render HTML của nút bấm này ra màn hình. -->
+                @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-lg ms-3">Sửa</a>
+                }
+            </div>
         </div>
     </div>
 
+   
+    <!-- PHẦN DƯỚI: SẢN PHẨM LIÊN QUAN (CÙNG HỆ)    -->
+    
+    <!-- Dùng lệnh Any() để kiểm tra nếu danh sách có ít nhất 1 sản phẩm thì mới hiện khu vực này -->
     @if (related.Any())
     {
         <h4 class="mt-5">Thẻ cùng hệ @Model.ElementType</h4>
         <div class="row mt-3">
+            <!-- Vòng lặp foreach duyệt qua từng sản phẩm liên quan -->
             @foreach (var r in related)
             {
-                <div class="col-6 col-md-3 mb-4"><partial name="_ProductCard" model="r" /></div>
+                <div class="col-6 col-md-3 mb-4">
+                    <!-- Gọi Partial View (View thành phần) '_ProductCard' để tái sử dụng lại code hiển thị 1 thẻ bài, truyền model 'r' vào -->
+                    <partial name="_ProductCard" model="r" />
+                </div>
             }
         </div>
     }

@@ -1,4 +1,5 @@
-﻿@{
+﻿@model UltraPokemon.Models.RegisterViewModel
+@{
     ViewData["Title"] = "Đăng ký";
 }
 
@@ -9,24 +10,45 @@
                 <h2 class="text-center mb-4">Đăng ký tài khoản</h2>
 
                 <form asp-action="Register" method="post">
+                    <!-- Hiển thị các lỗi chung của form (nếu có) từ Server trả về -->
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
+                    <!-- 1. TRƯỜNG EMAIL -->
                     <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input name="Email" type="email" class="form-control" required />
+                        <label asp-for="Email" class="form-label">Email</label>
+                        <!-- Sử dụng asp-for thay vì name="" để form liên kết chặt chẽ với RegisterViewModel -->
+                        <input asp-for="Email" class="form-control" placeholder="example@gmail.com" />
+                        <!-- Thẻ span này sẽ tự động hiện chữ đỏ cảnh báo nếu bỏ trống hoặc sai định dạng -->
+                        <span asp-validation-for="Email" class="text-danger"></span>
                     </div>
 
+                    <!-- 2. TRƯỜNG MẬT KHẨU KÈM NÚT ẨN/HIỆN -->
                     <div class="mb-3">
-                        <label class="form-label">Mật khẩu</label>
-                        <input name="Password" type="password" class="form-control" required />
+                        <label asp-for="Password" class="form-label">Mật khẩu</label>
+                        <!-- Dùng input-group của Bootstrap để gắn nút con mắt vào bên phải ô nhập liệu -->
+                        <div class="input-group">
+                            <input asp-for="Password" class="form-control" id="passwordField" placeholder="Nhập mật khẩu" />
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('passwordField', this)">
+                                👁️
+                            </button>
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger"></span>
                     </div>
 
+                    <!-- 3. TRƯỜNG XÁC NHẬN MẬT KHẨU KÈM NÚT ẨN/HIỆN -->
                     <div class="mb-3">
-                        <label class="form-label">Xác nhận mật khẩu</label>
-                        <input name="ConfirmPassword" type="password" class="form-control" required />
+                        <label asp-for="ConfirmPassword" class="form-label">Xác nhận mật khẩu</label>
+                        <div class="input-group">
+                            <input asp-for="ConfirmPassword" class="form-control" id="confirmPasswordField" placeholder="Nhập lại mật khẩu" />
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('confirmPasswordField', this)">
+                                👁️
+                            </button>
+                        </div>
+                        <!-- CỰC KỲ QUAN TRỌNG: Nếu nhập sai, lỗi [Compare] "Mật khẩu không khớp" sẽ văng ra ngay thẻ span này -->
+                        <span asp-validation-for="ConfirmPassword" class="text-danger fw-bold"></span>
                     </div>
 
-                    <div class="d-grid gap-2">
+                    <div class="d-grid gap-2 mt-4">
                         <button type="submit" class="btn btn-success">Đăng ký</button>
                     </div>
                 </form>
@@ -38,3 +60,25 @@
         </div>
     </div>
 </div>
+
+
+<!-- SCRIPTS XỬ LÝ KIỂM TRA LỖI & ẨN/HIỆN MẬT KHẨU -->
+
+@section Scripts {
+    <!-- Partial này nạp thư viện jQuery Validation. Giúp trình duyệt chặn lỗi "Mật khẩu không khớp" ngay khi đang gõ chữ mà chưa cần bấm nút Đăng Ký -->
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Hàm JS đơn giản: Tìm thẻ input theo ID, nếu đang ẩn (password) thì chuyển thành hiện (text) và ngược lại
+        function togglePassword(inputId, button) {
+            var input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                button.textContent = "🙈"; // Khi hiện chữ thì đổi biểu tượng thành con khỉ che mắt
+            } else {
+                input.type = "password";
+                button.textContent = "👁️"; // Khi ẩn chữ đi thì đổi biểu tượng lại thành mắt mở
+            }
+        }
+    </script>
+}

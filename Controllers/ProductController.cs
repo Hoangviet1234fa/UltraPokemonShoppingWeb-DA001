@@ -28,7 +28,7 @@ public class ProductController : Controller
     public async Task<IActionResult> Index(string? searchString, string? elementType, string? sortOrder)
     {
         // Danh sách hệ chuẩn lấy từ bảng Categories (dùng cho các nút lọc)
-        var elements = await _db.Categories.AsNoTracking()
+        var elements = await _db.   Categories.AsNoTracking()
             .OrderBy(c => c.Id).Select(c => c.Name).ToListAsync();
 
         // Đưa giá trị "elementType" trên URL về đúng tên hệ trong bảng Categories

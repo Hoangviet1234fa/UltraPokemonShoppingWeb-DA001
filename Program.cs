@@ -29,33 +29,15 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
-////
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-// kết nối để cotroller có thể gọi và thao tác với dữ liệu//
-var app = builder.Build();
 
-// --- TỰ ĐỘNG CẬP NHẬT DATABASE KHI KHỞI ĐỘNG ---
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<AppDbContext>();
-        context.Database.Migrate(); // Tự động tạo file .db và update bảng mà không cần gõ lệnh thủ công
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Đã xảy ra lỗi khi tự động tạo cơ sở dữ liệu.");
-    }
-}
-// 
+var app = builder.Build();
 
 // Tự động tạo Database và nạp dữ liệu mẫu (Sản phẩm + Tài khoản Admin)
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Chỉ dùng duy nhất lệnh này để tạo DB, tránh lỗi "Database disk image is malformed"
     dbContext.Database.EnsureCreated();
 
     // 1. Tự động thêm lại các thẻ bài mẫu kèm số lượng tồn kho (Stock) nếu bảng đang trống
@@ -99,7 +81,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
-
 app.UseRouting();
 
 // Kích hoạt Session Middleware (Phải đặt trước UseAuthentication và UseAuthorization)

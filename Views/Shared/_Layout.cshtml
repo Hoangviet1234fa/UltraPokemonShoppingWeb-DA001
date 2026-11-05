@@ -1,86 +1,111 @@
+@{
+    // Lấy giá trị chuỗi tìm kiếm hiện tại từ URL để giữ lại chữ trên ô input tìm kiếm khi người dùng chuyển trang
+    var currentSearch = Context.Request.Query["searchString"].ToString();
+}
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Ultra Pokemon</title>
+    <!-- Nhập thư viện CSS Bootstrap 5.3.3 từ CDN -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
     <header>
+        <!-- Thanh điều hướng (Navbar) chính của website -->
         <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
+                <!-- Logo thương hiệu -->
                 <a class="navbar-brand brand" asp-controller="Home" asp-action="Index">
                     <span class="text-primary">ULTRA</span> POKEMON
                 </a>
+                <!-- Nút thu gọn menu trên màn hình thiết bị di động (Responsive) -->
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="collapse navbar-collapse" id="mainNav">
+                    <!-- Danh sách các đường dẫn điều hướng bên trái -->
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item"><a class="nav-link text-dark fw-bold" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
                         <li class="nav-item"><a class="nav-link text-primary fw-bold" asp-controller="Product" asp-action="Index">Pokemon TCG</a></li>
-                        <li class="nav-item"><a class="nav-link text-primary" asp-controller="Categories" asp-action="Index">Hệ phái</a></li>
                         <li class="nav-item"><a class="nav-link text-muted" asp-controller="Home" asp-action="About">Giới thiệu</a></li>
                     </ul>
 
-                    <!-- Khu vực Tìm kiếm, Giỏ hàng và Tài khoản nằm ở bên phải -->
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <!-- Tìm kiếm -->
-                        <form class="d-flex align-items-center gap-1 m-0" asp-controller="Product" asp-action="Index" method="get">
-                            <input class="form-control form-control-sm" type="search" name="searchString"
-                                   placeholder="Tìm thẻ bài..." aria-label="Tìm kiếm"
-                                   value="@Context.Request.Query["searchString"]" />
-                            <button class="btn btn-sm btn-outline-dark text-nowrap" type="submit">🔍</button>
+                    <!-- Khu vực công cụ bên phải (Tìm kiếm, Giỏ hàng, Tài khoản / Đăng nhập) -->
+                    <div class="d-flex align-items-center justify-content-end gap-2 ms-auto">
+
+                        <!-- Form tìm kiếm sản phẩm (Gửi yêu cầu GET về ProductController) -->
+                        <form class="d-flex align-items-center me-2" asp-controller="Product" asp-action="Index" method="get">
+                            <input class="form-control form-control-lg me-2" type="search" name="searchString"
+                                   value="@currentSearch" placeholder="Tìm thẻ bài..." aria-label="Search">
+                            <button class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-center" type="submit">
+                                🔍
+                            </button>
                         </form>
 
-                        <!-- Giỏ hàng -->
-                        <a class="btn btn-sm btn-primary text-nowrap" asp-controller="Cart" asp-action="Index">
-                            🛒 (@CartSession.Count(Context.Session))
+                        <!-- Nút Giỏ hàng -->
+                        <a href="/Cart" class="btn btn-primary btn-lg fw-semibold px-3 d-inline-flex align-items-center text-nowrap">
+                            🛒 (@UltraPokemon.Helpers.CartSession.Count(Context.Session))
                         </a>
 
-                        <!-- Phân quyền hiển thị tài khoản -->
-                        <ul class="navbar-nav flex-row gap-2 align-items-center mb-0 ms-1">
-                            @if (User.Identity != null && User.Identity.IsAuthenticated)
+                        <!-- KHU VỰC PHÂN QUYỀN TÀI KHOẢN -->
+                        @if (User.Identity != null && User.Identity.IsAuthenticated)
+                        {
+                            <!-- NẾU LÀ ADMIN: Hiển thị Menu Thả Xuống (Dropdown) Quản lý tài khoản & Đơn hàng -->
+                            @if (User.IsInRole("Admin"))
                             {
-                                @if (User.IsInRole("Admin"))
-                                {
-                                    <li class="nav-item">
-                                        <a class="btn btn-sm btn-warning text-nowrap fw-bold" asp-controller="AdminAccounts" asp-action="Index">⚙️ Quản lý</a>
-                                    </li>
-                                }
-                                <li class="nav-item text-nowrap">
-                                    <span class="small text-secondary">Chào, <b>@User.Identity.Name</b></span>
-                                </li>
-                                <li class="nav-item">
-                                    <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger text-nowrap">Đăng xuất</button>
-                                    </form>
+                                <li class="nav-item dropdown list-unstyled ms-2">
+                                    <a class="nav-link dropdown-toggle btn btn-warning text-dark fw-bold px-3 py-2 text-nowrap" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        ⚙️ Quản lý
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="adminMenu">
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-semibold" asp-controller="AdminAccounts" asp-action="Index">👥 Quản lý Tài khoản</a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-semibold" asp-controller="AdminOrders" asp-action="Index">📦 Quản lý Đơn hàng</a>
+                                        </li>
+                                    </ul>
                                 </li>
                             }
-                            else
-                            {
-                                <li class="nav-item">
-                                    <a class="btn btn-sm btn-outline-primary text-nowrap" asp-controller="Account" asp-action="Login">Đăng nhập</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="btn btn-sm btn-primary text-nowrap" asp-controller="Account" asp-action="Register">Đăng ký</a>
-                                </li>
-                            }
-                        </ul>
+
+                            <!-- Hiển thị tên người dùng đang đăng nhập -->
+                            <span class="fs-6 text-secondary text-nowrap mx-1">Chào, <b>@User.Identity.Name</b></span>
+
+                            <!-- Nút Đăng xuất -->
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                <button type="submit" class="btn btn-outline-danger btn-lg text-nowrap">Đăng xuất</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <!-- NẾU CHƯA ĐĂNG NHẬP: Hiển thị nút Đăng nhập và Đăng ký -->
+                            <a href="/Account/Login" class="btn btn-outline-primary btn-lg fw-semibold px-3 d-inline-flex align-items-center text-nowrap">
+                                Đăng nhập
+                            </a>
+                            <a href="/Account/Register" class="btn btn-primary btn-lg fw-semibold px-3 d-inline-flex align-items-center text-nowrap">
+                                Đăng ký
+                            </a>
+                        }
                     </div>
                 </div>
             </div>
         </nav>
     </header>
 
+    <!-- Thân trang chính -->
     <div class="container">
+        <!-- Banner tiêu đề hệ thống -->
         <div class="banner text-center py-3 mb-3">
             <h2 class="text-primary fw-bold mb-0">ULTRA POKEMON TCG</h2>
-            <small class="text-muted">Hệ thống quản lý hệ phái &amp; bộ bài Pokemon TCG</small>
         </div>
 
+        <!-- Các khối thông báo chung (Success / Error) xuất hiện toàn hệ thống -->
         @if (TempData["Success"] is string ok)
         {
             <div class="alert alert-success py-2">@ok</div>
@@ -91,14 +116,16 @@
         }
 
         <main role="main" class="pb-3">
-            @RenderBody()
+            @RenderBody() <!-- Nơi các View con (Index, Details, Cart...) đổ nội dung vào -->
         </main>
     </div>
 
+    <!-- Chân trang (Footer) -->
     <footer class="footer border-top text-center text-muted py-3 mt-4 bg-light">
         &copy; 2026 - <strong>Ultra Pokemon Store</strong> - Đồ Án 001 (Nhóm 07)
     </footer>
 
+    <!-- Các tập lệnh JavaScript (jQuery và Bootstrap Bundle) -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
