@@ -1,0 +1,64 @@
+﻿@model UltraPokemon.Models.Order
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng #" + Model.Id;
+}
+
+<h2>Chi tiết đơn hàng <span class="text-primary">#@Model.Id</span></h2>
+<hr />
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <p><strong>Khách hàng:</strong> @Model.UserEmail</p>
+        <p><strong>Ngày đặt:</strong> @Model.OrderDate.ToString("dd/MM/yyyy HH:mm")</p>
+    </div>
+    <div class="col-md-6">
+        <p>
+            <strong>Trạng thái:</strong>
+            @if ((int)Model.Status == 0)
+            {
+                <span class="badge bg-warning text-dark">Chờ duyệt</span>
+            }
+            else if ((int)Model.Status == 1)
+            {
+
+                <span class="badge bg-info text-dark">Đang giao</span>
+            }
+            else
+            {
+
+                <span class="badge bg-success">Hoàn thành</span>
+            }
+        </p>
+        <p><strong>Tổng thanh toán:</strong> <span class="text-danger fw-bold">@Convert.ToDecimal(Model.TotalAmount).ToString("N0") VNĐ</span></p>
+    </div>
+</div>
+
+<h4>Danh sách thẻ bài đã đặt</h4>
+<table class="table table-striped mt-3">
+    <thead class="table-secondary">
+        <tr>
+            <th>Tên thẻ bài</th>
+            <th>Hệ</th>
+            <th class="text-center">Số lượng</th>
+            <th class="text-end">Đơn giá</th>
+            <th class="text-end">Thành tiền</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var detail in Model.OrderDetails)
+        {
+            var thanhTien = detail.Quantity * Convert.ToDecimal(detail.UnitPrice);
+            <tr>
+                <td class="fw-bold">@detail.Product.Name</td>
+                <td>@detail.Product.ElementType</td>
+                <td class="text-center">@detail.Quantity</td>
+                <td class="text-end">@Convert.ToDecimal(detail.UnitPrice).ToString("N0") đ</td>
+                <td class="text-end fw-bold">@thanhTien.ToString("N0") đ</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="mt-4">
+    <a asp-action="Index" class="btn btn-secondary">Quay lại danh sách</a>
+</div>

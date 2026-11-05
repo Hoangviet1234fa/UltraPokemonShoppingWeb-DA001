@@ -1,0 +1,69 @@
+﻿@model IEnumerable<UltraPokemon.Models.Order>
+@{
+    ViewData["Title"] = "Quản lý Đơn hàng";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-primary">Quản lý Đơn hàng</h2>
+
+    <!-- Thông báo lỗi hoặc thành công -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Mã ĐH</th>
+                    <th>Email Khách hàng</th>
+                    <th>Ngày đặt</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái & Cập nhật</th>
+                    <th>Thao tác</th> <!-- Đã bổ sung cột Thao tác -->
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="fw-bold">#@item.Id</td>
+                        <td>@item.UserEmail</td>
+                        <td>@item.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-danger fw-bold">@Convert.ToDecimal(item.TotalAmount).ToString("N0") VNĐ</td>
+                        <td>
+                            <!-- Form Cập nhật trạng thái -->
+                            <form asp-action="UpdateStatus" method="post" class="d-flex align-items-center">
+                                <input type="hidden" name="id" value="@item.Id" />
+
+                                <!-- Đã sửa name="status" thành name="newStatus" để khớp 100% với Controller -->
+                                <select name="newStatus" class="form-select form-select-sm me-2" style="width: 150px;">
+                                    <option value="0" selected="@((int)item.Status == 0)">Chờ duyệt</option>
+                                    <option value="1" selected="@((int)item.Status == 1)">Đang giao</option>
+                                    <option value="2" selected="@((int)item.Status == 2)">Hoàn thành</option>
+                                </select>
+
+                                <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
+                            </form>
+                        </td>
+                        <td>
+                            <!-- Đã bổ sung 2 nút Xem chi tiết và Xóa để không lãng phí code Controller bạn đã viết -->
+                            <div class="d-flex gap-1">
+                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm text-white">Chi tiết</a>
+                                <form asp-action="Delete" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đơn hàng này?');">
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

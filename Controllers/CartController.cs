@@ -12,6 +12,7 @@ public class CartController : Controller
     private readonly AppDbContext _db;
     public CartController(AppDbContext db) => _db = db;
 
+    // 1. HIỂN THỊ GIỎ HÀNG
     public async Task<IActionResult> Index()
     {
         var cart = CartSession.Get(HttpContext.Session);
@@ -22,9 +23,11 @@ public class CartController : Controller
             .Select(p => new CartLine { Product = p, Quantity = cart[p.Id] })
             .OrderBy(l => l.Product.Name)
             .ToList();
+
         return View(lines);
     }
 
+    // 2. THÊM SẢN PHẨM VÀO GIỎ
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(int id, string? returnUrl)
     {
@@ -33,15 +36,25 @@ public class CartController : Controller
 
         var cart = CartSession.Get(HttpContext.Session);
         cart.TryGetValue(id, out var qty);
+
+        // BUSINESS LOGIC BỔ SUNG: Chặn ngay từ lúc thêm vào giỏ nếu vượt quá tồn kho
+        if (qty + 1 > product.Stock)
+        {
+            TempData["Error"] = $"Không thể thêm. Cửa hàng chỉ còn {product.Stock} lá \"{product.Name}\".";
+            return RedirectToAction("Index", "Product");
+        }
+
         cart[id] = qty + 1;
         CartSession.Save(HttpContext.Session, cart);
         TempData["Success"] = $"Đã thêm \"{product.Name}\" vào giỏ hàng.";
 
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
             return Redirect(returnUrl);
+
         return RedirectToAction("Index", "Product");
     }
 
+    // 3. XÓA 1 SẢN PHẨM KHỎI GIỎ
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Remove(int id)
     {
@@ -51,6 +64,7 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // 4. XÓA TRẮNG GIỎ HÀNG
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Clear()
     {
@@ -58,10 +72,11 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    //  THANH TOÁN & TỒN KHO
-    
+    // ==============================================================
+    // 5. THANH TOÁN & NGHIỆP VỤ TỒN KHO (Phần quan trọng nhất)
+    // ==============================================================
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize] // Bắt buộc khách hàng phải đăng nhập mới được thanh toán
+    [Authorize] // Bắt buộc người dùng đăng nhập mới được thanh toán
     public async Task<IActionResult> Checkout()
     {
         var cart = CartSession.Get(HttpContext.Session);
@@ -71,62 +86,76 @@ public class CartController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        // Lấy danh sách sản phẩm trong giỏ hàng từ DB (Không dùng AsNoTracking vì cần Update tồn kho)
+        // Lấy danh sách sản phẩm. CẦN THIẾT: Bỏ AsNoTracking() để EF Core có thể Update lại số lượng (Stock)
         var ids = cart.Keys.ToList();
         var products = await _db.Products.Where(p => ids.Contains(p.Id)).ToListAsync();
 
-        // 1. BUSINESS LOGIC: KIỂM TRA TỒN KHO TRƯỚC KHI LƯU
+        // 5.1 BUSINESS LOGIC: KIỂM TRA TỒN KHO LẦN CUỐI TRƯỚC KHI LƯU
         foreach (var p in products)
         {
             var buyQuantity = cart[p.Id];
             if (buyQuantity > p.Stock)
             {
                 TempData["Error"] = $"Lỗi: Sản phẩm \"{p.Name}\" chỉ còn {p.Stock} lá. Vui lòng giảm số lượng!";
-                return RedirectToAction(nameof(Index)); // Quay lại giỏ hàng và báo lỗi
+                return RedirectToAction(nameof(Index));
             }
         }
 
-        // 2. TẠO HÓA ĐƠN (ORDER)
-        var order = new Order
+        // BẮT ĐẦU TRANSACTION: Đảm bảo dữ liệu không bị lưu nửa chừng nếu có lỗi phát sinh
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            UserEmail = User.Identity!.Name!, // Lấy Email người đang đăng nhập
-            OrderDate = DateTime.Now,
-            Status = OrderStatus.Pending, // Chờ duyệt
-
-            // Dùng LINQ tính tổng tiền: Lấy Giá (chuyển đổi nếu cần) nhân với Số lượng
-            TotalAmount = products.Sum(p => Convert.ToDecimal(p.Price) * cart[p.Id])
-        };
-
-        _db.Orders.Add(order);
-        await _db.SaveChangesAsync(); // Lưu để EF Core tự sinh ra mã OrderId
-
-        // 3. TẠO CHI TIẾT HÓA ĐƠN & TRỪ TỒN KHO
-        foreach (var p in products)
-        {
-            var buyQuantity = cart[p.Id];
-
-            // 3.1 Thêm dữ liệu vào bảng OrderDetail
-            var orderDetail = new OrderDetail
+            // 5.2 TẠO HÓA ĐƠN (ORDER)
+            var order = new Order
             {
-                OrderId = order.Id,
-                ProductId = p.Id,
-                Quantity = buyQuantity,
-                UnitPrice = Convert.ToDecimal(p.Price)
+                UserEmail = User.Identity!.Name!,
+                OrderDate = DateTime.Now,
+                Status = OrderStatus.Pending,
+                TotalAmount = products.Sum(p => Convert.ToDecimal(p.Price) * cart[p.Id])
             };
-            _db.OrderDetails.Add(orderDetail);
 
-            // 3.2 BUSINESS LOGIC: TRỪ SỐ LƯỢNG TỒN KHO
-            p.Stock -= buyQuantity;
-            _db.Products.Update(p);
+            _db.Orders.Add(order);
+            await _db.SaveChangesAsync(); // Lưu lần 1 để EF Core sinh ra mã OrderId
+
+            // 5.3 TẠO CHI TIẾT HÓA ĐƠN & TRỪ TỒN KHO
+            foreach (var p in products)
+            {
+                var buyQuantity = cart[p.Id];
+
+                // Lưu OrderDetail
+                var orderDetail = new OrderDetail
+                {
+                    OrderId = order.Id,
+                    ProductId = p.Id,
+                    Quantity = buyQuantity,
+                    UnitPrice = Convert.ToDecimal(p.Price)
+                };
+                _db.OrderDetails.Add(orderDetail);
+
+                // Cập nhật trừ số lượng tồn kho
+                p.Stock -= buyQuantity;
+                _db.Products.Update(p);
+            }
+
+            // Lưu toàn bộ chi tiết Hóa đơn và thay đổi tồn kho của Sản phẩm
+            await _db.SaveChangesAsync();
+
+            // Xác nhận hoàn tất Transaction (Commit) - Khóa dữ liệu thành công
+            await transaction.CommitAsync();
         }
-
-        // 4. LƯU TOÀN BỘ THAY ĐỔI
-        await _db.SaveChangesAsync();
-
-        // 5. LÀM SẠCH GIỎ HÀNG SAU KHI THÀNH CÔNG
+        catch (Exception)
+        {
+            // Nếu có bất kỳ lỗi gì xảy ra (vd mất kết nối DB), hủy toàn bộ thao tác trước đó (Rollback)
+            await transaction.RollbackAsync();
+            TempData["Error"] = "Đã xảy ra lỗi hệ thống trong quá trình thanh toán. Vui lòng thử lại!";
+            return RedirectToAction(nameof(Index));
+        }
+        // 5.4 LÀM SẠCH GIỎ HÀNG VÀ THÔNG BÁO THÀNH CÔNG
         CartSession.Save(HttpContext.Session, new Dictionary<int, int>());
 
         TempData["Success"] = "Đặt hàng thành công! Đơn hàng của bạn đang chờ duyệt.";
+
+        // Sửa dòng cũ thành dòng này (Quay lại chính trang Giỏ hàng)
         return RedirectToAction(nameof(Index));
     }
 }
