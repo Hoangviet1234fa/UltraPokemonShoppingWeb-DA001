@@ -12,9 +12,9 @@ public class CartController : Controller
     private readonly AppDbContext _db;
     public CartController(AppDbContext db) => _db = db;
 
-    // ========================================================
+    
     // 1. HIỂN THỊ GIỎ HÀNG
-    // ========================================================
+    
     public async Task<IActionResult> Index()
     {
         var cart = CartSession.Get(HttpContext.Session);
@@ -29,9 +29,9 @@ public class CartController : Controller
         return View(lines);
     }
 
-    // ========================================================
+    
     // 2. THÊM SẢN PHẨM VÀO GIỎ
-    // ========================================================
+   
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(int id, string? returnUrl)
     {
@@ -58,9 +58,9 @@ public class CartController : Controller
         return RedirectToAction("Index", "Product");
     }
 
-    // ========================================================
+    
     // 3. XÓA 1 SẢN PHẨM KHỎI GIỎ
-    // ========================================================
+   
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Remove(int id)
     {
@@ -70,9 +70,9 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ========================================================
+    
     // 4. XÓA TRẮNG GIỎ HÀNG
-    // ========================================================
+  
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Clear()
     {
@@ -80,10 +80,9 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ========================================================
+ 
     // 5. THANH TOÁN & NGHIỆP VỤ TỒN KHO (TÍCH HỢP FORM THÔNG TIN)
-    // ========================================================
-
+    
     // 5.1 GET: HIỂN THỊ FORM ĐIỀN THÔNG TIN THANH TOÁN
     [HttpGet]
     [Authorize] // Bắt buộc người dùng đăng nhập mới được vào trang Checkout

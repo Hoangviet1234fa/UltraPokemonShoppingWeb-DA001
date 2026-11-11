@@ -9,7 +9,7 @@ namespace UltraPokemon.Models
         Pending = 0,    // Chờ duyệt
         Shipping = 1,   // Đang giao
         Completed = 2,  // Hoàn thành
-        Cancelled = 3   // Đã hủy 
+        Cancelled = 3   // Đã hủy (Kích hoạt hoàn trả kho tự động)
     }
 
     public class Order
