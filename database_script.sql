@@ -1,9 +1,4 @@
--- =======================================================================
--- TRƯỜNG ĐẠI HỌC / HỌC PHẦN: LẬP TRÌNH TRÊN WEB (WEB PROGRAMMING)
--- ĐỀ TÀI 01: ONLINE SHOPPING WEBSITE - ULTRA POKEMON TCG STORE
--- TẬP LỆNH TẠO CƠ SỞ DỮ LIỆU ĐẦY ĐỦ VÀ NẠP TOÀN BỘ DỮ LIỆU (SQL SCRIPT)
--- HỆ QUẢN TRỊ CSDL: MICROSOFT SQL SERVER / LOCALDB
--- =======================================================================
+
 
 -- 1. TẠO CƠ SỞ DỮ LIỆU
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = N'UltraPokemonDB')
@@ -23,9 +18,9 @@ IF OBJECT_ID(N'dbo.Categories', N'U') IS NOT NULL DROP TABLE dbo.Categories;
 IF OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL DROP TABLE dbo.Users;
 GO
 
--- =======================================================================
+=
 -- 3. ĐỊNH NGHĨA CẤU TRÚC CÁC BẢNG (TABLE SCHEMAS & CONSTRAINTS)
--- =======================================================================
+
 
 -- BẢNG 1: CATEGORIES (HỆ POKÉMON / DANH MỤC THẺ BÀI)
 CREATE TABLE dbo.Categories (
@@ -70,7 +65,7 @@ GO
 --   0 = Pending (Chờ duyệt)
 --   1 = Shipping (Đang giao hàng)
 --   2 = Completed (Hoàn thành)
---   3 = Cancelled (Đã hủy)
+--   3 = Cancelled (Đã hủy - Kích hoạt hoàn kho)
 CREATE TABLE dbo.Orders (
     Id INT IDENTITY(1001,1) NOT NULL,
     UserEmail NVARCHAR(100) NOT NULL,
@@ -100,9 +95,9 @@ CREATE TABLE dbo.OrderDetails (
 );
 GO
 
--- =======================================================================
+
 -- 4. NẠP TOÀN BỘ DỮ LIỆU ĐẦY ĐỦ CỦA PROJECT (FULL SEED DATA)
--- =======================================================================
+
 
 SET IDENTITY_INSERT dbo.Categories ON;
 INSERT INTO dbo.Categories (Id, Name) VALUES 
@@ -117,7 +112,6 @@ GO
 
 SET IDENTITY_INSERT dbo.Users ON;
 -- Mật khẩu mặc định của các tài khoản mẫu đều là: 123
--- (Chuỗi Hash tương thích chuẩn ASP.NET Core PasswordHasher v3)
 INSERT INTO dbo.Users (Id, Email, PasswordHash, Role, IsApproved, AvatarUrl) VALUES 
 (1, N'admin@ultrapokemon.com', N'AQAAAAIAAYagAAAAEOvE+gQd17WvjEGB/k1L9j8GvJkK8v1fQ9gQ8zY+1pL9kK8v1fQ9gQ8zY+1pL9kK8w==', N'Admin', 1, NULL),
 (2, N'user@ultrapokemon.com', N'AQAAAAIAAYagAAAAEOvE+gQd17WvjEGB/k1L9j8GvJkK8v1fQ9gQ8zY+1pL9kK8v1fQ9gQ8zY+1pL9kK8w==', N'User', 1, NULL),
@@ -166,9 +160,9 @@ INSERT INTO dbo.OrderDetails (Id, OrderId, ProductId, Quantity, UnitPrice) VALUE
 SET IDENTITY_INSERT dbo.OrderDetails OFF;
 GO
 
--- =======================================================================
+
 -- 5. TRUY VẤN KIỂM TRA NHANH KẾT QUẢ TẠO DỮ LIỆU
--- =======================================================================
+
 SELECT 'Categories' AS [Table], COUNT(*) AS [TotalRows] FROM dbo.Categories
 UNION ALL
 SELECT 'Products' AS [Table], COUNT(*) AS [TotalRows] FROM dbo.Products
