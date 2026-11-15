@@ -1,0 +1,354 @@
+﻿@model UltraPokemon.Models.Order
+@{
+    ViewData["Title"] = "Cổng thanh toán thẻ";
+    Layout = null; // Tắt layout chung để hiển thị cổng thanh toán độc lập
+
+    int amount = Convert.ToInt32(Model.TotalAmount);
+    string orderCode = "ULTRA" + Model.Id.ToString("D6");
+    bool isVisa = Model.PaymentMethod == "Visa Card";
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cổng thanh toán bảo mật - @orderCode</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+            body {
+                background-color: #eef2f6;
+                font-family: 'Segoe UI', system-ui, sans-serif;
+            }
+
+            .top-bar {
+                background: #0b2240;
+                color: #fff;
+                padding: 14px 0;
+                border-bottom: 3px solid #f6821f;
+            }
+
+            .gateway-card {
+                background: #fff;
+                border-radius: 16px;
+                padding: 28px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+            }
+
+            /* Hiệu ứng Thẻ Ngân Hàng 3D Lật Mặt */
+            .card-scene {
+                width: 100%;
+                max-width: 360px;
+                height: 215px;
+                perspective: 1000px;
+                margin: 0 auto 24px auto;
+            }
+
+            .virtual-card {
+                width: 100%;
+                height: 100%;
+                position: relative;
+                transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1);
+                transform-style: preserve-3d;
+            }
+
+                .virtual-card.is-flipped {
+                    transform: rotateY(180deg);
+                }
+
+            .card-face {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                backface-visibility: hidden;
+                border-radius: 16px;
+                padding: 22px;
+                color: #fff;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                box-shadow: 0 12px 25px rgba(11, 34, 64, 0.3);
+            }
+
+            .card-front {
+                background: linear-gradient(135deg, #1a1f71 0%, #005baa 60%, #0099ff 100%);
+            }
+
+            .card-back {
+                background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+                transform: rotateY(180deg);
+                padding: 20px 0;
+            }
+
+            .chip {
+                width: 44px;
+                height: 32px;
+                background: linear-gradient(135deg, #ffe082, #ffb300);
+                border-radius: 6px;
+            }
+
+            .mag-stripe {
+                width: 100%;
+                height: 42px;
+                background: #000;
+                margin-top: 8px;
+            }
+
+            .cvv-strip {
+                background: #fff;
+                color: #000;
+                padding: 6px 12px;
+                margin: 16px 22px 0 22px;
+                border-radius: 6px;
+                text-align: right;
+                font-family: monospace;
+                font-weight: bold;
+                letter-spacing: 2px;
+            }
+
+            .bank-pill {
+                border: 1.5px solid #dee2e6;
+                border-radius: 8px;
+                padding: 6px 10px;
+                font-size: 0.78rem;
+                font-weight: 700;
+                cursor: pointer;
+                background: #fff;
+                transition: all 0.2s;
+            }
+
+                .bank-pill.active, .bank-pill:hover {
+                    border-color: #005baa;
+                    background: #e7f1ff;
+                    color: #005baa;
+                }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-warning text-dark fw-bold">3D-SECURE</span>
+                <span class="fw-bold fs-5">CỔNG THANH TOÁN @(isVisa ? "VISA / MASTERCARD" : "ATM NỘI ĐỊA NAPAS")</span>
+            </div>
+            <span class="small text-white-50">Mã GD: <strong class="text-white">@orderCode</strong></span>
+        </div>
+    </div>
+
+    <div class="container pb-5">
+        <div class="row justify-content-center g-4">
+            <!-- CỘT TRÁI: THẺ 3D TƯƠNG TÁC & TÓM TẮT THANH TOÁN -->
+            <div class="col-lg-5">
+                <div class="gateway-card h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <!-- Thẻ ngân hàng 3D cập nhật real-time khi người dùng nhập liệu -->
+                        <div class="card-scene">
+                            <div class="virtual-card" id="virtualCard">
+                                <!-- Mặt trước thẻ -->
+                                <div class="card-face card-front" id="cardFrontBg">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="chip"></div>
+                                        <span class="fw-bold fst-italic fs-5" id="cardBrandLabel">@(isVisa ? "VISA" : "VIETCOMBANK")</span>
+                                    </div>
+                                    <div class="fs-5 fw-bold font-monospace my-2" style="letter-spacing: 2px;" id="displayCardNumber">
+                                        •••• •••• •••• ••••
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-end small">
+                                        <div>
+                                            <div class="text-white-50" style="font-size: 0.65rem;">CHỦ THẺ</div>
+                                            <div class="fw-bold text-uppercase" id="displayCardName">NGUYEN VAN A</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="text-white-50" style="font-size: 0.65rem;">HIỆU LỰC</div>
+                                            <div class="fw-bold" id="displayExpiry">MM/YY</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Mặt sau thẻ (Hiện ra khi focus vào ô CVV) -->
+                                <div class="card-face card-back">
+                                    <div class="mag-stripe"></div>
+                                    <div class="cvv-strip">
+                                        <span class="text-muted small me-2">CVV:</span>
+                                        <span id="displayCvv">•••</span>
+                                    </div>
+                                    <div class="px-4 small text-white-50" style="font-size: 0.7rem;">
+                                        Giao dịch được bảo vệ bởi tiêu chuẩn bảo mật quốc tế PCI-DSS.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tóm tắt đơn hàng -->
+                        <div class="p-3 rounded-3 bg-light border">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="text-muted">Đơn vị thụ hưởng</span>
+                                <strong>ULTRA POKEMON TCG</strong>
+                            </div>
+                            <div class="d-flex justify-content-between small mb-2">
+                                <span class="text-muted">Khách hàng</span>
+                                <strong>@Model.FullName</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <span class="fw-bold text-dark">Số tiền thanh toán</span>
+                                <span class="fs-4 fw-bold text-danger">@amount.ToString("N0")đ</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <a asp-controller="Cart" asp-action="Index" class="text-muted text-decoration-none small">← Hủy giao dịch và quay lại</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CỘT PHẢI: BƯỚC 1 NHẬP THẺ -> BƯỚC 2 XÁC THỰC OTP -->
+            <div class="col-lg-5">
+                <div class="gateway-card h-100">
+                    <!-- BƯỚC 1: FORM NHẬP THÔNG TIN THẺ -->
+                    <div id="stepCardInput">
+                        <h5 class="fw-bold mb-3">Nhập thông tin thẻ thanh toán</h5>
+
+                        @if (!isVisa)
+                        {
+                            <!-- Bộ chọn nhanh ngân hàng nội địa dành cho thẻ ATM Napas -->
+                            <div class="mb-3">
+                                <label class="form-label small text-muted fw-semibold">Chọn ngân hàng phát hành</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="bank-pill active" onclick="selectBank(this, 'VIETCOMBANK', 'linear-gradient(135deg, #006a31, #5cb85c)')">Vietcombank</button>
+                                    <button type="button" class="bank-pill" onclick="selectBank(this, 'MB BANK', 'linear-gradient(135deg, #141ed2, #00a8ff)')">MBBank</button>
+                                    <button type="button" class="bank-pill" onclick="selectBank(this, 'TECHCOMBANK', 'linear-gradient(135deg, #c8102e, #212529)')">Techcombank</button>
+                                    <button type="button" class="bank-pill" onclick="selectBank(this, 'ACB', 'linear-gradient(135deg, #005baa, #00c6ff)')">ACB</button>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Số thẻ in trên mặt trước</label>
+                            <input type="text" id="inputCardNum" class="form-control form-control-lg font-monospace" maxlength="19" placeholder="@(isVisa ? "4111 2222 3333 4444" : "9704 3600 1234 5678")" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tên chủ thẻ (Không dấu)</label>
+                            <input type="text" id="inputCardName" class="form-control text-uppercase" placeholder="PHAM QUANG HIEN" />
+                        </div>
+
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">@(isVisa ? "Ngày hết hạn (MM/YY)" : "Ngày phát hành (MM/YY)")</label>
+                                <input type="text" id="inputExpiry" class="form-control" maxlength="5" placeholder="08/28" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">@(isVisa ? "Mã CVV (3 số mặt sau)" : "Mã PIN / CVV")</label>
+                                <input type="password" id="inputCvv" class="form-control" maxlength="3" placeholder="•••" />
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="goToOtpStep()" class="btn w-100 py-3 text-white fw-bold rounded-3" style="background-color: #f6821f;">
+                            TIẾP TỤC XÁC THỰC OTP →
+                        </button>
+                    </div>
+
+                    <!-- BƯỚC 2: XÁC THỰC MÃ OTP 3D-SECURE -->
+                    <div id="stepOtpVerify" style="display: none;" class="text-center py-3">
+                        <div class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill mb-3 fw-bold">
+                            🔐 XÁC THỰC BẢO MẬT 3D-SECURE
+                        </div>
+                        <h5 class="fw-bold">Nhập mã OTP</h5>
+                        <p class="text-muted small mb-4">
+                            Mã xác thực 6 chữ số đã được gửi đến số điện thoại <strong>@Model.PhoneNumber</strong>.
+                        </p>
+
+                        <input type="text" id="otpCodeInput" class="form-control form-control-lg text-center fw-bold fs-4 mx-auto mb-2" style="max-width: 220px; letter-spacing: 6px;" maxlength="6" placeholder="123456" />
+                        <div class="small text-muted mb-4">(Môi trường test: nhập 6 số bất kỳ, ví dụ <strong>123456</strong>)</div>
+
+                        <!-- Form xác nhận thanh toán gửi về CartController -->
+                        <form asp-controller="Cart" asp-action="ConfirmOnlinePayment" method="post" id="finalCardForm">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="orderId" value="@Model.Id" />
+                            <button type="button" onclick="submitCardPayment()" id="btnFinalPay" class="btn btn-success w-100 py-3 fw-bold rounded-3 mb-2">
+                                XÁC NHẬN THANH TOÁN @amount.ToString("N0")đ
+                            </button>
+                        </form>
+                        <button type="button" onclick="backToCard()" class="btn btn-link btn-sm text-muted text-decoration-none">← Sửa lại thông tin thẻ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+            const virtualCard = document.getElementById('virtualCard');
+            const inputCardNum = document.getElementById('inputCardNum');
+            const inputCardName = document.getElementById('inputCardName');
+            const inputExpiry = document.getElementById('inputExpiry');
+            const inputCvv = document.getElementById('inputCvv');
+
+            // Tự động tách nhóm 4 số thẻ và cập nhật lên mặt thẻ 3D
+            inputCardNum.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
+                e.target.value = val;
+                document.getElementById('displayCardNumber').innerText = val || '•••• •••• •••• ••••';
+            });
+
+            // Cập nhật tên chủ thẻ viết hoa lên thẻ 3D
+            inputCardName.addEventListener('input', (e) => {
+                document.getElementById('displayCardName').innerText = e.target.value.toUpperCase() || 'NGUYEN VAN A';
+            });
+
+            // Tự động chèn dấu '/' cho ngày tháng MM/YY
+            inputExpiry.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/\D/g, '');
+                if (val.length >= 2) val = val.substring(0, 2) + '/' + val.substring(2, 4);
+                e.target.value = val;
+                document.getElementById('displayExpiry').innerText = val || 'MM/YY';
+            });
+
+            // Lật mặt sau thẻ 3D khi người dùng bấm vào ô nhập mã CVV
+            inputCvv.addEventListener('focus', () => virtualCard.classList.add('is-flipped'));
+            inputCvv.addEventListener('blur', () => virtualCard.classList.remove('is-flipped'));
+            inputCvv.addEventListener('input', (e) => {
+                document.getElementById('displayCvv').innerText = e.target.value || '•••';
+            });
+
+            // Đổi màu sắc và tên ngân hàng trên thẻ 3D
+            function selectBank(btn, bankName, gradient) {
+                document.querySelectorAll('.bank-pill').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('cardBrandLabel').innerText = bankName;
+                document.getElementById('cardFrontBg').style.background = gradient;
+            }
+
+            // Chuyển sang bước nhập OTP
+            function goToOtpStep() {
+                if (inputCardNum.value.replace(/\s/g, '').length < 12 || !inputCardName.value.trim()) {
+                    alert('Vui lòng nhập đầy đủ số thẻ và tên chủ thẻ!');
+                    return;
+                }
+                document.getElementById('stepCardInput').style.display = 'none';
+                document.getElementById('stepOtpVerify').style.display = 'block';
+            }
+
+            function backToCard() {
+                document.getElementById('stepOtpVerify').style.display = 'none';
+                document.getElementById('stepCardInput').style.display = 'block';
+            }
+
+            // Xác thực OTP và Submit form về Server
+            function submitCardPayment() {
+                const otp = document.getElementById('otpCodeInput').value.trim();
+                if (otp.length < 6) {
+                    alert('Vui lòng nhập đủ 6 chữ số mã OTP!');
+                    return;
+                }
+                const btn = document.getElementById('btnFinalPay');
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang kết nối ngân hàng...';
+                btn.disabled = true;
+                setTimeout(() => {
+                    document.getElementById('finalCardForm').submit();
+                }, 1500);
+            }
+    </script>
+</body>
+</html>

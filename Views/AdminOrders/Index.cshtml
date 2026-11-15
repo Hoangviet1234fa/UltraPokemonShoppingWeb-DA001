@@ -1,83 +1,161 @@
 ﻿@model IEnumerable<UltraPokemon.Models.Order>
+@using UltraPokemon.Models
 @{
-    ViewData["Title"] = "Quản lý Đơn hàng";
+    ViewData["Title"] = "Quản lý đơn hàng";
 }
 
-<div class="container mt-4">
-    <h2 class="mb-4 text-primary">Quản lý Đơn hàng</h2>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">📦 Quản lý đơn hàng</h2>
+            <p class="text-muted small mb-0">Theo dõi đơn đặt hàng, đối soát thanh toán online và cập nhật trạng thái giao hàng</p>
+        </div>
+        <span class="badge bg-dark fs-6 px-3 py-2">Tổng: @Model.Count() đơn</span>
+    </div>
 
-    <!-- Khối hiển thị thông báo lỗi hoặc thành công từ hệ thống -->
+    <!-- Hiển thị thông báo thành công / lỗi từ TempData -->
     @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success">@TempData["Success"]</div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     }
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger">@TempData["Error"]</div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     }
 
-    <div class="table-responsive">
-        <!-- Bảng hiển thị danh sách toàn bộ hóa đơn của khách hàng -->
-        <table class="table table-bordered table-hover align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>Mã ĐH</th>
-                    <th>Email Khách hàng</th>
-                    <th>Ngày đặt</th>
-                    <th>Tổng tiền</th>
-                    <th>Trạng thái & Cập nhật</th>
-                    <th>Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
+    <!-- BỘ LỌC & TÌM KIẾM ĐƠN HÀNG (Khớp với AdminOrdersController.Index) -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body bg-light rounded-3">
+            <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-secondary">Tìm kiếm đơn hàng</label>
+                    <input type="text" name="search" value="@ViewBag.CurrentSearch" class="form-control" placeholder="Mã đơn (#ULTRA...), tên, SĐT, email..." />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-secondary">Hình thức thanh toán</label>
+                    <select name="paymentMethod" class="form-select">
+                        <option value="">-- Tất cả hình thức --</option>
+                        <option value="Tiền mặt (COD)" selected="@(ViewBag.CurrentPaymentMethod == "Tiền mặt (COD)")">Tiền mặt (COD)</option>
+                        <option value="Ví Momo" selected="@(ViewBag.CurrentPaymentMethod == "Ví Momo")">Ví MoMo</option>
+                        <option value="Chuyển khoản Ngân hàng (ATM)" selected="@(ViewBag.CurrentPaymentMethod == "Chuyển khoản Ngân hàng (ATM)")">ATM / Napas</option>
+                        <option value="Visa Card" selected="@(ViewBag.CurrentPaymentMethod == "Visa Card")">Thẻ Visa</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-secondary">Trạng thái đơn</label>
+                    <select name="status" class="form-select">
+                        <option value="">-- Tất cả trạng thái --</option>
+                        <option value="0" selected="@(ViewBag.CurrentStatus?.ToString() == "0")">Chờ duyệt</option>
+                        <option value="1" selected="@(ViewBag.CurrentStatus?.ToString() == "1")">Đang giao</option>
+                        <option value="2" selected="@(ViewBag.CurrentStatus?.ToString() == "2")">Hoàn thành</option>
+                        <option value="3" selected="@(ViewBag.CurrentStatus?.ToString() == "3")">Đã hủy</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary w-100 fw-semibold">Lọc</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary" title="Xóa bộ lọc">↻</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- BẢNG DANH SÁCH ĐƠN HÀNG -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
                     <tr>
-                        <!-- Hiển thị mã đơn hàng dạng #ID -->
-                        <td class="fw-bold">#@item.Id</td>
-
-                        <!-- Hiển thị email người đặt -->
-                        <td>@item.UserEmail</td>
-
-                        <!-- Định dạng ngày giờ đặt hàng chuẩn Việt Nam -->
-                        <td>@item.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
-
-                        <!-- Hiển thị tổng tiền có dấu phân cách hàng nghìn (N0) -->
-                        <td class="text-danger fw-bold">@Convert.ToDecimal(item.TotalAmount).ToString("N0") VNĐ</td>
-
-                        <!-- Cột Trạng thái kèm form cập nhật trực tiếp -->
-                        <td>
-                            <form asp-action="UpdateStatus" method="post" class="d-flex align-items-center">
-                                <input type="hidden" name="id" value="@item.Id" />
-
-                                <!-- ĐÃ BỔ SUNG TRẠNG THÁI "ĐÃ HỦY" (value="3") ĐỂ KHỚP VỚI CONTROLLER -->
-                                <select name="newStatus" class="form-select form-select-sm me-2" style="width: 150px;">
-                                    <option value="0" selected="@((int)item.Status == 0)">Chờ duyệt</option>
-                                    <option value="1" selected="@((int)item.Status == 1)">Đang giao</option>
-                                    <option value="2" selected="@((int)item.Status == 2)">Hoàn thành</option>
-                                    <option value="3" selected="@((int)item.Status == 3)" class="text-danger fw-bold">Đã hủy</option>
-                                </select>
-
-                                <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
-                            </form>
-                        </td>
-
-                        <!-- Cột Thao tác: Xem chi tiết hóa đơn hoặc Xóa đơn hàng -->
-                        <td>
-                            <div class="d-flex gap-1">
-                                <!-- Nút chuyển hướng sang trang Details để xem các lá bài cụ thể trong đơn -->
-                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm text-white">Chi tiết</a>
-
-                                <!-- Form xóa đơn hàng có hộp thoại JavaScript xác nhận trước khi xóa -->
-                                <form asp-action="Delete" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đơn hàng này?');">
-                                    <input type="hidden" name="id" value="@item.Id" />
-                                    <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
-                                </form>
-                            </div>
-                        </td>
+                        <th>Mã đơn</th>
+                        <th>Khách hàng & Giao nhận</th>
+                        <th>Thanh toán</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Thao tác</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">Không tìm thấy đơn hàng nào phù hợp.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-primary">@item.OrderCode</div>
+                                    <div class="small text-muted">@item.OrderDate.ToString("dd/MM/yyyy HH:mm")</div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">@item.FullName</div>
+                                    <div class="small text-muted">📞 @item.PhoneNumber | ✉️ @item.UserEmail</div>
+                                    <div class="small text-muted text-truncate" style="max-width: 260px;" title="@item.Address">
+                                        📍 @item.Address
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (item.PaymentMethod == "Ví Momo")
+                                    {
+                                        <span class="badge text-white px-2 py-1" style="background-color: #a50064;">Ví MoMo</span>
+                                    }
+                                    else if (item.PaymentMethod == "Chuyển khoản Ngân hàng (ATM)")
+                                    {
+                                        <span class="badge bg-primary px-2 py-1">ATM Napas</span>
+                                    }
+                                    else if (item.PaymentMethod == "Visa Card")
+                                    {
+                                        <span class="badge text-warning px-2 py-1" style="background-color: #1a1f71;">VISA</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success px-2 py-1">Tiền mặt (COD)</span>
+                                    }
+                                </td>
+                                <td class="fw-bold text-danger">@item.TotalAmount.ToString("N0")đ</td>
+                                <td>
+                                    @switch (item.Status)
+                                    {
+                                        case OrderStatus.Pending:
+                                            <span class="badge bg-warning text-dark">⏳ Chờ duyệt</span>
+                                            break;
+                                        case OrderStatus.Shipping:
+                                            <span class="badge bg-info text-dark">🚚 Đang giao</span>
+                                            break;
+                                        case OrderStatus.Completed:
+                                            <span class="badge bg-success">✅ Hoàn thành</span>
+                                            break;
+                                        case OrderStatus.Cancelled:
+                                            <span class="badge bg-danger">❌ Đã hủy</span>
+                                            break;
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary fw-semibold">
+                                        Chi tiết
+                                    </a>
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                          onsubmit="return confirm('Xác nhận xóa đơn hàng @item.OrderCode? (Nếu đơn chưa hủy, tồn kho sẽ tự động được hoàn trả)');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>

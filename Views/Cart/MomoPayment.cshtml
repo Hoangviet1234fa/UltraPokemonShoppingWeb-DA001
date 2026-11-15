@@ -1,0 +1,183 @@
+﻿@model UltraPokemon.Models.Order
+@{
+    ViewData["Title"] = "Cổng thanh toán MoMo";
+    Layout = null; // Tắt Layout mặc định để làm màn hình full giống cổng thanh toán thật
+
+    // Tính tổng số lượng sản phẩm
+    int totalItems = Model.OrderDetails.Sum(od => od.Quantity);
+    int amount = Convert.ToInt32(Model.TotalAmount);
+    string orderCode = "ULTRA" + Model.Id.ToString("D6");
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cổng thanh toán MoMo - Ultra Pokemon</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <style>
+            body {
+                background-color: #f4f5f7;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            }
+
+            .momo-header {
+                background-color: #fff;
+                padding: 15px 50px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            }
+
+            .momo-color {
+                color: #a50064;
+            }
+
+            .momo-bg {
+                background-color: #a50064;
+            }
+
+            .qr-box {
+                background: linear-gradient(135deg, #d82d8b 0%, #a50064 100%);
+                border-radius: 15px;
+                padding: 30px;
+                color: white;
+                box-shadow: 0 10px 20px rgba(165, 0, 100, 0.2);
+            }
+
+            .order-info-box {
+                background: #fff;
+                border-radius: 12px;
+                padding: 25px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            }
+
+            .timer-box {
+                background-color: #fde8f2;
+                border-radius: 10px;
+                padding: 15px;
+                text-align: center;
+                margin-top: 20px;
+            }
+
+            .timer-number {
+                background: #a50064;
+                color: white;
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-weight: bold;
+                font-size: 1.2rem;
+            }
+    </style>
+</head>
+<body>
+
+    <!-- Header Cổng thanh toán -->
+    <div class="momo-header d-flex align-items-center mb-5">
+        <img src="https://upload.wikimedia.org/wikipedia/vi/f/f1/MoMo_Logo.png" alt="MoMo" style="height: 35px; margin-right: 15px;" />
+        <h4 class="m-0 text-dark" style="font-weight: 600;">Cổng thanh toán MoMo</h4>
+    </div>
+
+    <div class="container">
+        <div class="row justify-content-center g-4">
+
+            <!-- CỘT TRÁI: THÔNG TIN ĐƠN HÀNG -->
+            <div class="col-md-4">
+                <div class="order-info-box">
+                    <h5 class="fw-bold mb-4">Thông tin đơn hàng</h5>
+
+                    <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                        <div class="bg-light p-2 rounded me-3">
+                            <i class="fa-solid fa-gamepad fs-3 text-primary"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small d-block">Nhà cung cấp</span>
+                            <strong class="text-dark">ULTRA POKEMON TCG</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <span class="text-muted small d-block mb-1">Mã đơn hàng</span>
+                        <strong class="text-dark">@orderCode</strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <span class="text-muted small d-block mb-1">Mô tả</span>
+                        <strong class="text-dark">Thanh toán mua @totalItems lá bài Pokémon</strong>
+                    </div>
+
+                    <div class="mb-3 pb-3 border-bottom">
+                        <span class="text-muted small d-block mb-1">Số tiền</span>
+                        <h3 class="fw-bold text-dark m-0">@amount.ToString("N0")đ</h3>
+                    </div>
+
+                    <!-- Countdown Timer -->
+                    <div class="timer-box">
+                        <p class="momo-color fw-bold mb-2 small">Đơn hàng sẽ hết hạn sau:</p>
+                        <div class="d-flex justify-content-center align-items-center gap-2">
+                            <div class="text-center">
+                                <span class="timer-number" id="minutes">10</span>
+                                <div class="small text-muted mt-1" style="font-size: 0.7rem;">Phút</div>
+                            </div>
+                            <span class="fw-bold fs-4">:</span>
+                            <div class="text-center">
+                                <span class="timer-number" id="seconds">00</span>
+                                <div class="small text-muted mt-1" style="font-size: 0.7rem;">Giây</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="/" class="text-decoration-none momo-color fw-bold"><i class="fa-solid fa-arrow-left me-1"></i> Quay về trang chủ</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CỘT PHẢI: QUÉT MÃ QR -->
+            <div class="col-md-6">
+                <div class="qr-box text-center">
+                    <div class="d-flex justify-content-center gap-2 mb-4">
+                        <span class="badge bg-white text-dark py-2 px-3 rounded-pill"><i class="fa-solid fa-gift momo-color me-1"></i> Tích xu đổi quà cho mọi giao dịch</span>
+                    </div>
+
+                    <!-- MÃ QR ĐỘNG -->
+                    <div class="bg-white p-3 rounded-4 d-inline-block position-relative mb-4" style="border: 2px dashed #fde8f2;">
+
+                        <!--
+                          API TẠO QR ĐỘNG TỪ VIETQR (MoMo Quét được)
+                          Cú pháp: https://img.vietqr.io/image/<Mã_Ngân_Hàng>-<Số_Tài_Khoản>-compact2.png?amount=<Số_Tiền>&addInfo=<Nội_Dung>
+                          BẠN HÃY THAY mbbank VÀ 0912345678 BẰNG NGÂN HÀNG VÀ SĐT CỦA BẠN!
+                        -->
+                        <img src="https://img.vietqr.io/image/mbbank-0912345678-compact2.png?amount=@amount&addInfo=ThanhToan_@orderCode&accountName=ULTRA POKEMON TCG"
+                             alt="QR Code" style="width: 280px; height: 280px; object-fit: contain;" />
+
+                    </div>
+
+                    <h5 class="fw-bold mb-2"><i class="fa-solid fa-qrcode me-2"></i> Sử dụng App MoMo hoặc ứng dụng Camera hỗ trợ QR code để quét mã</h5>
+                    <p class="small mb-0 opacity-75">Quét mã để thanh toán tự động, không cần nhập số tiền và nội dung.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script đếm ngược thời gian 10 phút -->
+    <script>
+            let timeInSecs = 10 * 60;
+            let ticker = setInterval(function () {
+                let minutes = Math.floor(timeInSecs / 60);
+                let seconds = timeInSecs % 60;
+
+                document.getElementById("minutes").innerText = minutes < 10 ? "0" + minutes : minutes;
+                document.getElementById("seconds").innerText = seconds < 10 ? "0" + seconds : seconds;
+
+                timeInSecs--;
+                if (timeInSecs < 0) {
+                    clearInterval(ticker);
+                    alert("Đã hết thời gian thanh toán. Đơn hàng sẽ bị hủy!");
+                    window.location.href = "/";
+                }
+            }, 1000);
+    </script>
+</body>
+</html>

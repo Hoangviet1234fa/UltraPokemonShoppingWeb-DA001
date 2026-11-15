@@ -1,5 +1,5 @@
 @{
-    // Lấy giá trị chuỗi tìm kiếm hiện tại từ URL để giữ lại chữ trên ô input tìm kiếm khi người dùng chuyển trang
+    // Lấy giá trị chuỗi tìm kiếm hiện tại từ URL để giữ lại chữ trên ô input tìm kiếm khi chuyển trang
     var currentSearch = Context.Request.Query["searchString"].ToString();
 }
 <!DOCTYPE html>
@@ -35,6 +35,7 @@
                     <a class="navbar-brand brand" asp-controller="Home" asp-action="Index">
                         <span class="text-primary">ULTRA</span> POKEMON
                     </a>
+
                     <!-- Nút thu gọn menu trên màn hình thiết bị di động (Responsive) -->
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
@@ -43,9 +44,23 @@
                     <div class="collapse navbar-collapse" id="mainNav">
                         <!-- Danh sách các đường dẫn điều hướng bên trái -->
                         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                            <li class="nav-item"><a class="nav-link text-dark fw-bold" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
-                            <li class="nav-item"><a class="nav-link text-primary fw-bold" asp-controller="Product" asp-action="Index">Pokemon TCG</a></li>
-                            <li class="nav-item"><a class="nav-link text-muted" asp-controller="Home" asp-action="About">Giới thiệu</a></li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark fw-bold text-nowrap" asp-controller="Home" asp-action="Index">Trang chủ</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-primary fw-bold text-nowrap" asp-controller="Product" asp-action="Index">Pokemon TCG</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-muted text-nowrap" asp-controller="Home" asp-action="About">Giới thiệu</a>
+                            </li>
+
+                            <!-- Hiển thị mục Lịch sử đơn hàng khi người dùng đã đăng nhập -->
+                            @if (User.Identity != null && User.Identity.IsAuthenticated)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark fw-semibold text-nowrap" asp-controller="Cart" asp-action="MyOrders">Đơn hàng của tôi</a>
+                                </li>
+                            }
                         </ul>
 
                         <!-- Khu vực công cụ bên phải (Tìm kiếm, Giỏ hàng, Tài khoản / Đăng nhập) -->
@@ -60,7 +75,7 @@
                                 </button>
                             </form>
 
-                            <!-- Nút Giỏ hàng (Đã xóa bỏ biểu tượng giỏ hàng) -->
+                            <!-- Nút Giỏ hàng -->
                             <a href="/Cart" class="btn btn-primary btn-lg fw-semibold px-3 d-inline-flex align-items-center text-nowrap">
                                 Giỏ hàng (@UltraPokemon.Helpers.CartSession.Count(Context.Session))
                             </a>
@@ -68,11 +83,11 @@
                             <!-- KHU VỰC PHÂN QUYỀN TÀI KHOẢN -->
                             @if (User.Identity != null && User.Identity.IsAuthenticated)
                             {
-                                <!-- NẾU LÀ ADMIN: Hiển thị Menu Thả Xuống (Dropdown) Quản lý (Đã xóa biểu tượng bánh răng, tài khoản, đơn hàng) -->
+                                <!-- NẾU LÀ ADMIN: Hiển thị Menu Thả Xuống (Dropdown) Quản lý -->
                                 @if (User.IsInRole("Admin"))
                                 {
-                                    <li class="nav-item dropdown list-unstyled ms-2">
-                                        <a class="nav-link dropdown-toggle btn btn-warning text-dark fw-bold px-3 py-2 text-nowrap" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <div class="dropdown ms-1">
+                                        <a class="dropdown-toggle btn btn-warning text-dark fw-bold px-3 py-2 text-nowrap" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                             Quản lý
                                         </a>
                                         <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="adminMenu">
@@ -84,7 +99,7 @@
                                                 <a class="dropdown-item py-2 fw-semibold" asp-controller="AdminOrders" asp-action="Index">Quản lý Đơn hàng</a>
                                             </li>
                                         </ul>
-                                    </li>
+                                    </div>
                                 }
 
                                 <!-- Hiển thị tên người dùng đang đăng nhập -->
