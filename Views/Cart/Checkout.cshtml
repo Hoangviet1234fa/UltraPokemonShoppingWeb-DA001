@@ -24,9 +24,9 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
 <div class="container py-4 checkout-wrapper">
-    <!-- ===================================================================== -->
+  
     <!-- 1. THANH HEADER & TIẾN TRÌNH THANH TOÁN 3 BƯỚC (CHECKOUT STEPPER)     -->
-    <!-- ===================================================================== -->
+    
     <div class="bg-white rounded-4 shadow-sm p-4 mb-4">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 border-bottom">
             <div class="d-flex align-items-center gap-3">
@@ -85,16 +85,16 @@
         </div>
     }
 
-    <!-- ===================================================================== -->
+    
     <!-- 2. FORM THANH TOÁN CHÍNH (BỐ CỤC 2 CỘT: TRÁI 7 PHẦN - PHẢI 5 PHẦN)   -->
-    <!-- ===================================================================== -->
+    
     <form asp-controller="Cart" asp-action="Checkout" method="post" id="checkoutForm">
         @Html.AntiForgeryToken()
 
         <div class="row g-4 align-items-start">
-            <!-- ============================================================= -->
+           
             <!-- CỘT TRÁI (7 PHẦN): THÔNG TIN GIAO HÀNG + CỔNG THANH TOÁN      -->
-            <!-- ============================================================= -->
+          
             <div class="col-lg-7">
                 <!-- KHỐI 2.1: THÔNG TIN NGƯỜI NHẬN HÀNG -->
                 <div class="card border-0 shadow-sm rounded-4 mb-4">
@@ -256,9 +256,9 @@
                 </div>
             </div>
 
-            <!-- ============================================================= -->
+          
             <!-- CỘT PHẢI (5 PHẦN): TÓM TẮT ĐƠN HÀNG & NÚT ĐẶT HÀNG (STICKY)   -->
-            <!-- ============================================================= -->
+        
             <div class="col-lg-5">
                 <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 20px;">
                     <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
