@@ -2,34 +2,202 @@
     ViewData["Title"] = "Đăng nhập";
 }
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-4">
-        <div class="card shadow">
-            <div class="card-body">
-                <h2 class="text-center mb-4">Đăng nhập</h2>
+<div class="auth-page-wrapper py-4 py-md-5">
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden mx-auto auth-split-card">
+        <div class="row g-0">
+            <!-- ============================================================= -->
+            <!-- CỘT TRÁI: THƯƠNG HIỆU & TIỆN ÍCH THÀNH VIÊN (ẨN TRÊN MOBILE)  -->
+            <!-- ============================================================= -->
+            <div class="col-lg-5 d-none d-lg-flex flex-column justify-content-between p-4 p-xl-5 text-white auth-brand-panel">
+                <div>
+                    <!-- Logo thương hiệu đồng bộ với Header -->
+                    <a asp-controller="Home" asp-action="Index" class="d-inline-flex align-items-center gap-2 text-decoration-none text-white mb-4">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <circle cx="16" cy="16" r="14.5" fill="#FFFFFF" stroke="#0F172A" stroke-width="2.4" />
+                            <path d="M1.5 16C1.5 7.99187 7.99187 1.5 16 1.5C24.0081 1.5 30.5 7.99187 30.5 16H1.5Z" fill="#DC2626" />
+                            <rect x="1.5" y="14.5" width="29" height="3" fill="#0F172A" />
+                            <circle cx="16" cy="16" r="5" fill="#FFFFFF" stroke="#0F172A" stroke-width="2.4" />
+                            <circle cx="16" cy="16" r="2" fill="#2563EB" />
+                        </svg>
+                        <span class="fw-bold tracking-tight fs-5">ULTRA <span class="text-warning">POKÉMON</span></span>
+                    </a>
 
-                <form asp-action="Login" method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <h3 class="fw-bold mb-3 lh-base">Chào mừng Trainer quay trở lại!</h3>
+                    <p class="text-white-50 small mb-4">
+                        Đăng nhập để quản lý đơn đặt hàng, theo dõi lộ trình giao vận và săn những lá bài hiếm mới nhất.
+                    </p>
 
+                    <!-- Danh sách quyền lợi thành viên -->
+                    <ul class="list-unstyled small d-flex flex-column gap-3 mb-0">
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-warning mt-1"></i>
+                            <span>Tra cứu trạng thái đơn hàng &amp; lịch sử thanh toán 24/7</span>
+                        </li>
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-warning mt-1"></i>
+                            <span>Thanh toán nhanh qua Ví MoMo, ATM Napas &amp; Visa 3D</span>
+                        </li>
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-warning mt-1"></i>
+                            <span>Đóng gói tiêu chuẩn Sleeve + Toploader cho mọi đơn</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="pt-4 border-top border-white border-opacity-10 small text-white-50">
+                    <i class="bi bi-shield-lock me-1 text-info"></i> Bảo mật phiên đăng nhập chuẩn ASP.NET Core
+                </div>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- CỘT PHẢI: BIỂU MẪU ĐĂNG NHẬP                                  -->
+            <!-- ============================================================= -->
+            <div class="col-lg-7 bg-white p-4 p-sm-5">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Đăng nhập</h3>
+                        <p class="text-muted small mb-0">Nhập thông tin tài khoản của bạn để tiếp tục</p>
+                    </div>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-sm btn-light border text-secondary" title="Về trang chủ">
+                        <i class="bi bi-house"></i>
+                    </a>
+                </div>
+
+                <!-- Hiển thị thông báo lỗi từ Controller (hỗ trợ cả ViewBag.Error và ModelState) -->
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger border-0 bg-danger-subtle text-danger small d-flex align-items-center gap-2 py-2 rounded-3 mb-3">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        <div>@ViewBag.Error</div>
+                    </div>
+                }
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div asp-validation-summary="All" class="alert alert-danger border-0 bg-danger-subtle text-danger small py-2 rounded-3 mb-3"></div>
+                }
+
+                <!-- Form Đăng nhập -->
+                <form asp-controller="Account" asp-action="Login" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Trường Email / Tên đăng nhập -->
                     <div class="mb-3">
-                        <label class="form-label">Tên đăng nhập / Email</label>
-                        <input name="Email" class="form-control" required />
+                        <label for="loginEmail" class="form-label fw-semibold small text-dark">
+                            Tên đăng nhập / Email <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group auth-input-group">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted">
+                                <i class="bi bi-envelope"></i>
+                            </span>
+                            <input type="text" id="loginEmail" name="email"
+                                   class="form-control border-start-0 ps-1"
+                                   placeholder="admin@ultrapokemon.com"
+                                   autocomplete="username" required />
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Mật khẩu</label>
-                        <input name="Password" type="password" class="form-control" required />
+                    <!-- Trường Mật khẩu kèm nút ẩn/hiện vector -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label for="loginPassword" class="form-label fw-semibold small text-dark mb-0">
+                                Mật khẩu <span class="text-danger">*</span>
+                            </label>
+                        </div>
+                        <div class="input-group auth-input-group">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            <input type="password" id="loginPassword" name="password"
+                                   class="form-control border-start-0 border-end-0 ps-1"
+                                   placeholder="Nhập mật khẩu của bạn"
+                                   autocomplete="current-password" required />
+                            <button type="button" class="btn btn-outline-secondary border-start-0 auth-eye-btn"
+                                    onclick="togglePassword('loginPassword', this)" tabindex="-1" title="Hiện/Ẩn mật khẩu">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Đăng nhập</button>
+                    <!-- Nút Submit Đăng nhập -->
+                    <button type="submit" class="btn btn-primary w-100 fw-bold auth-submit-btn mb-3">
+                        <span>Đăng nhập</span>
+                        <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+
+                    <!-- Chuyển sang trang Đăng ký -->
+                    <div class="text-center small text-muted pt-2 border-top">
+                        Chưa có tài khoản thành viên?
+                        <a asp-controller="Account" asp-action="Register" class="fw-bold text-primary text-decoration-none ms-1">
+                            Đăng ký ngay
+                        </a>
                     </div>
                 </form>
-
-                <div class="mt-3 text-center">
-                    <p>Chưa có tài khoản? <a asp-action="Register">Đăng ký ngay</a></p>
-                </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .auth-split-card {
+        max-width: 900px;
+    }
+
+    .auth-brand-panel {
+        background: linear-gradient(150deg, #0f172a 0%, #1e3a8a 100%);
+    }
+
+    .auth-input-group .form-control,
+    .auth-input-group .input-group-text,
+    .auth-eye-btn {
+        height: 44px;
+        border-color: #cbd5e1;
+    }
+
+    .auth-input-group:focus-within .form-control,
+    .auth-input-group:focus-within .input-group-text,
+    .auth-input-group:focus-within .auth-eye-btn {
+        border-color: #2563eb;
+    }
+
+    .auth-input-group .form-control:focus {
+        box-shadow: none;
+    }
+
+    .auth-input-group:focus-within {
+        border-radius: 0.375rem;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    .auth-eye-btn {
+        background-color: #ffffff;
+        color: #64748b;
+    }
+
+        .auth-eye-btn:hover {
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+    .auth-submit-btn {
+        height: 46px;
+        border-radius: 10px;
+        font-size: 0.95rem;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Hàm bật/tắt hiển thị mật khẩu dùng Bootstrap Icons
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector("i");
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.replace("bi-eye", "bi-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.replace("bi-eye-slash", "bi-eye");
+            }
+        }
+    </script>
+}

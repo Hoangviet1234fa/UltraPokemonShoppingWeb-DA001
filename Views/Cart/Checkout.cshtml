@@ -1,178 +1,359 @@
 ﻿@model UltraPokemon.Models.CheckoutViewModel
+@using UltraPokemon.Data
+@using UltraPokemon.Helpers
+@using UltraPokemon.Models
+@inject AppDbContext _db
 @{
     ViewData["Title"] = "Thanh toán đơn hàng";
 
-    // Lấy dữ liệu giỏ hàng từ ViewBag để hiển thị danh sách sản phẩm động
-    var cartLines = ViewBag.CartLines as List<UltraPokemon.Models.CartLine>;
-    decimal totalAmount = ViewBag.TotalAmount != null ? Convert.ToDecimal(ViewBag.TotalAmount) : 0m;
-    int totalQty = ViewBag.TotalQuantity != null ? Convert.ToInt32(ViewBag.TotalQuantity) : 0;
+    // Lấy dữ liệu giỏ hàng trực tiếp từ Session và truy vấn thông tin lá bài từ Database
+    var cart = CartSession.Get(Context.Session);
+    var productIds = cart.Keys.ToList();
+    var products = _db.Products.Where(p => productIds.Contains(p.Id)).ToList();
+
+    var cartItems = products
+        .Select(p => new CartLine { Product = p, Quantity = cart[p.Id] })
+        .OrderBy(l => l.Product.Name)
+        .ToList();
+
+    int totalCards = cartItems.Sum(i => i.Quantity);
+    decimal totalAmount = cartItems.Sum(i => i.Product.Price * i.Quantity);
 }
 
-<div class="container py-4 my-3" style="background-color: #1c2024; border-radius: 16px; color: #fff; box-shadow: 0 12px 35px rgba(0,0,0,0.35);">
+<!-- Nhúng thư viện Bootstrap Icons (Icon vector nét mảnh đồng bộ toàn hệ thống) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
-    <!-- Header thương hiệu -->
-    <div class="d-flex align-items-center justify-content-between px-4 py-3 mb-4" style="background: linear-gradient(90deg, #0b2240 0%, #163b6e 100%); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-        <div class="d-flex align-items-center gap-3">
-            <span class="badge bg-warning text-dark fw-bold px-2 py-1">TCG STORE</span>
-            <h3 class="fw-bold text-white m-0" style="letter-spacing: 1px;">ULTRA POKEMON CHECKOUT</h3>
+<div class="container py-4 checkout-wrapper">
+    <!-- ===================================================================== -->
+    <!-- 1. THANH HEADER & TIẾN TRÌNH THANH TOÁN 3 BƯỚC (CHECKOUT STEPPER)     -->
+    <!-- ===================================================================== -->
+    <div class="bg-white rounded-4 shadow-sm p-4 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 border-bottom">
+            <div class="d-flex align-items-center gap-3">
+                <div class="checkout-brand-badge">
+                    <i class="bi bi-bag-check-fill"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h4 class="fw-bold text-dark mb-0">Thanh toán đơn hàng</h4>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">
+                            ULTRA POKEMON TCG
+                        </span>
+                    </div>
+                    <p class="text-muted small mb-0 mt-1">
+                        Hoàn tất thông tin giao nhận và chọn cổng thanh toán an toàn
+                    </p>
+                </div>
+            </div>
+
+            <!-- Cam kết bảo mật -->
+            <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 bg-success-subtle text-success small fw-semibold">
+                <i class="bi bi-shield-lock-fill fs-5"></i>
+                <span>Mã hóa bảo mật SSL 256-bit</span>
+            </div>
         </div>
-        <span class="text-white-50 small d-none d-md-inline">🔒 Bảo mật SSL 256-bit</span>
+
+        <!-- Thanh tiến trình 3 bước -->
+        <div class="row text-center pt-3 g-2 checkout-steps">
+            <div class="col-4">
+                <a asp-controller="Cart" asp-action="Index" class="text-decoration-none d-inline-flex align-items-center gap-2 text-success fw-semibold small">
+                    <span class="step-circle step-done"><i class="bi bi-check-lg"></i></span>
+                    <span>1. Giỏ hàng</span>
+                </a>
+            </div>
+            <div class="col-4">
+                <div class="d-inline-flex align-items-center gap-2 text-primary fw-bold small">
+                    <span class="step-circle step-active">2</span>
+                    <span>2. Giao hàng & Thanh toán</span>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="d-inline-flex align-items-center gap-2 text-muted fw-semibold small">
+                    <span class="step-circle">3</span>
+                    <span>3. Hoàn tất đơn hàng</span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <form asp-controller="Cart" asp-action="ProcessCheckout" method="post" id="checkoutForm">
+    <!-- Hiển thị thông báo lỗi tổng quát nếu có -->
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger border-0 shadow-sm rounded-3 d-flex align-items-center gap-2 mb-4">
+            <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+            <div>Vui lòng kiểm tra lại các thông tin giao hàng được đánh dấu đỏ bên dưới.</div>
+        </div>
+    }
+
+    <!-- ===================================================================== -->
+    <!-- 2. FORM THANH TOÁN CHÍNH (BỐ CỤC 2 CỘT: TRÁI 7 PHẦN - PHẢI 5 PHẦN)   -->
+    <!-- ===================================================================== -->
+    <form asp-controller="Cart" asp-action="Checkout" method="post" id="checkoutForm">
         @Html.AntiForgeryToken()
 
-        <div class="row g-4">
-        
-            <!-- CỘT TRÁI: THÔNG TIN NHẬN HÀNG & HƯỚNG DẪN THEO PHƯƠNG THỨC       -->
-    
-            <div class="col-lg-6">
-                <div class="p-4 h-100 d-flex flex-column justify-content-between" style="background-color: #252a30; border-radius: 12px; border: 1px solid #383f47;">
-                    <div>
-                        <h5 class="fw-bold mb-1 text-warning">1. Thông tin giao hàng</h5>
-                        <p class="text-white-50 small mb-4">Nhập chính xác địa chỉ để nhận bộ bài Pokémon của bạn.</p>
-
-                        <div class="mb-3">
-                            <label asp-for="FullName" class="form-label small fw-semibold text-light">Họ và tên người nhận <span class="text-danger">*</span></label>
-                            <input asp-for="FullName" class="form-control bg-dark text-white border-secondary py-2" placeholder="Nhập họ và tên người nhận" />
-                            <span asp-validation-for="FullName" class="text-danger small"></span>
+        <div class="row g-4 align-items-start">
+            <!-- ============================================================= -->
+            <!-- CỘT TRÁI (7 PHẦN): THÔNG TIN GIAO HÀNG + CỔNG THANH TOÁN      -->
+            <!-- ============================================================= -->
+            <div class="col-lg-7">
+                <!-- KHỐI 2.1: THÔNG TIN NGƯỜI NHẬN HÀNG -->
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="section-number">1</span>
+                            <h5 class="fw-bold text-dark mb-0">Thông tin giao nhận</h5>
                         </div>
+                        @if (User.Identity != null && User.Identity.IsAuthenticated)
+                        {
+                            <span class="small text-muted">
+                                <i class="bi bi-person-check text-success me-1"></i>@User.Identity.Name
+                            </span>
+                        }
+                    </div>
 
-                        <div class="mb-3">
-                            <label asp-for="PhoneNumber" class="form-label small fw-semibold text-light">Số điện thoại liên hệ <span class="text-danger">*</span></label>
-                            <input asp-for="PhoneNumber" class="form-control bg-dark text-white border-secondary py-2" placeholder="Nhập số điện thoại" />
-                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <!-- Họ và tên người nhận -->
+                            <div class="col-md-6">
+                                <label asp-for="FullName" class="form-label fw-semibold small text-dark">
+                                    Họ và tên người nhận <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-secondary border-end-0">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                    <input asp-for="FullName" class="form-control border-start-0 ps-1"
+                                           placeholder="VD: Nguyễn Văn An" required />
+                                </div>
+                                <span asp-validation-for="FullName" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Số điện thoại liên hệ -->
+                            <div class="col-md-6">
+                                <label asp-for="PhoneNumber" class="form-label fw-semibold small text-dark">
+                                    Số điện thoại liên hệ <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-secondary border-end-0">
+                                        <i class="bi bi-telephone"></i>
+                                    </span>
+                                    <input asp-for="PhoneNumber" class="form-control border-start-0 ps-1"
+                                           placeholder="VD: 0912 345 678" required />
+                                </div>
+                                <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Địa chỉ nhận hàng chi tiết -->
+                            <div class="col-12">
+                                <label asp-for="Address" class="form-label fw-semibold small text-dark">
+                                    Địa chỉ giao hàng chi tiết <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-secondary border-end-0 align-items-start pt-2">
+                                        <i class="bi bi-geo-alt"></i>
+                                    </span>
+                                    <textarea asp-for="Address" rows="2" class="form-control border-start-0 ps-1"
+                                              placeholder="Số nhà, tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố..." required></textarea>
+                                </div>
+                                <span asp-validation-for="Address" class="text-danger small"></span>
+                            </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="mb-4">
-                            <label asp-for="Address" class="form-label small fw-semibold text-light">Địa chỉ giao hàng chi tiết <span class="text-danger">*</span></label>
-                            <textarea asp-for="Address" rows="3" class="form-control bg-dark text-white border-secondary" placeholder="Số nhà, tên đường, Phường/Xã, Quận/Huyện, Tỉnh/TP..."></textarea>
-                            <span asp-validation-for="Address" class="text-danger small"></span>
+                <!-- KHỐI 2.2: CHỌN PHƯƠNG THỨC THANH TOÁN -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-bottom py-3 px-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="section-number">2</span>
+                            <h5 class="fw-bold text-dark mb-0">Phương thức thanh toán</h5>
                         </div>
                     </div>
 
-                    <!-- Khung thông báo động cập nhật bằng JavaScript khi đổi phương thức thanh toán -->
-                    <div id="methodGuideBox" class="p-3 rounded-3" style="background-color: rgba(25, 135, 84, 0.15); border: 1px solid rgba(25, 135, 84, 0.4);">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <span id="guideIcon" class="fs-5">🚚</span>
-                            <strong id="guideTitle" class="text-success small">Thanh toán tiền mặt khi nhận hàng (COD)</strong>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <!-- Lựa chọn 1: Tiền mặt (COD) -->
+                            <div class="col-md-6">
+                                <label class="payment-option-card" data-theme="cod">
+                                    <input type="radio" name="PaymentMethod" value="Tiền mặt (COD)"
+                                           class="payment-radio" checked />
+                                    <div class="payment-card-inner">
+                                        <div class="payment-icon icon-cod">
+                                            <i class="bi bi-cash-coin"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold text-dark small">Tiền mặt (COD)</div>
+                                            <div class="text-muted" style="font-size: 0.76rem;">Thanh toán khi nhận hàng</div>
+                                        </div>
+                                        <i class="bi bi-check-circle-fill check-mark"></i>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Lựa chọn 2: Ví MoMo -->
+                            <div class="col-md-6">
+                                <label class="payment-option-card" data-theme="momo">
+                                    <input type="radio" name="PaymentMethod" value="Ví Momo"
+                                           class="payment-radio" />
+                                    <div class="payment-card-inner">
+                                        <div class="payment-icon icon-momo">
+                                            <i class="bi bi-qr-code-scan"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold text-dark small">Ví điện tử MoMo</div>
+                                            <div class="text-muted" style="font-size: 0.76rem;">Quét mã VietQR tức thì</div>
+                                        </div>
+                                        <i class="bi bi-check-circle-fill check-mark"></i>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Lựa chọn 3: Thẻ ATM / Napas -->
+                            <div class="col-md-6">
+                                <label class="payment-option-card" data-theme="atm">
+                                    <input type="radio" name="PaymentMethod" value="Chuyển khoản Ngân hàng (ATM)"
+                                           class="payment-radio" />
+                                    <div class="payment-card-inner">
+                                        <div class="payment-icon icon-atm">
+                                            <i class="bi bi-bank"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold text-dark small">Thẻ ATM / Napas</div>
+                                            <div class="text-muted" style="font-size: 0.76rem;">Hơn 40 ngân hàng nội địa</div>
+                                        </div>
+                                        <i class="bi bi-check-circle-fill check-mark"></i>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Lựa chọn 4: Thẻ Quốc Tế Visa / Mastercard -->
+                            <div class="col-md-6">
+                                <label class="payment-option-card" data-theme="visa">
+                                    <input type="radio" name="PaymentMethod" value="Visa Card"
+                                           class="payment-radio" />
+                                    <div class="payment-card-inner">
+                                        <div class="payment-icon icon-visa">
+                                            <i class="bi bi-credit-card-2-front"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold text-dark small">Thẻ Quốc Tế</div>
+                                            <div class="text-muted" style="font-size: 0.76rem;">Visa / Mastercard / JCB</div>
+                                        </div>
+                                        <i class="bi bi-check-circle-fill check-mark"></i>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
-                        <p id="guideDesc" class="text-light opacity-75 small m-0">
-                            Bạn được kiểm tra ngoại quan gói hàng trước khi thanh toán trực tiếp cho nhân viên giao hàng.
-                        </p>
+
+                        <!-- Khung hướng dẫn động thay đổi theo phương thức thanh toán đang chọn -->
+                        <div id="paymentNoticeBox" class="mt-3 p-3 rounded-3 bg-success-subtle text-success-emphasis border border-success-subtle small d-flex align-items-start gap-2">
+                            <i class="bi bi-truck fs-5 mt-0"></i>
+                            <div id="paymentNoticeText">
+                                <strong>Thanh toán tiền mặt khi nhận hàng (COD):</strong> Bạn được đồng kiểm ngoại quan hộp hàng và tem niêm phong trước khi thanh toán cho bưu tá.
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- CỘT PHẢI: CHỌN PHƯƠNG THỨC THANH TOÁN & TÓM TẮT CHI TIẾT ĐƠN      -->
-      
-            <div class="col-lg-6">
-                <div class="p-4 h-100 d-flex flex-column justify-content-between" style="background-color: #ffffff; border-radius: 12px; color: #212529;">
-                    <div>
-                        <h5 class="fw-bold mb-1 text-dark">2. Phương thức thanh toán</h5>
-                        <p class="text-muted small mb-3">Chọn cổng thanh toán phù hợp với bạn</p>
-
-                        <!-- Grid 4 thẻ chọn phương thức (Dùng SVG & Badge nội bộ, không phụ thuộc ảnh ngoài) -->
-                        <div class="row g-2 mb-4">
-                            <!-- 1. Tiền mặt (COD) -->
-                            <div class="col-6">
-                                <input type="radio" asp-for="PaymentMethod" value="Tiền mặt (COD)" id="payCOD" class="btn-check payment-radio" checked />
-                                <label class="pay-card w-100 p-2 rounded-3 d-flex align-items-center gap-2" for="payCOD">
-                                    <div class="bg-success bg-opacity-10 text-success rounded-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
-                                        <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
-                                            <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1H1zm7 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
-                                            <path d="M0 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V5zm3 0a2 2 0 0 1-2 2v4a2 2 0 0 1 2 2h10a2 2 0 0 1 2-2V7a2 2 0 0 1-2-2H3z" />
-                                        </svg>
-                                    </div>
-                                    <div class="text-start lh-sm">
-                                        <div class="fw-bold text-dark small">Tiền mặt (COD)</div>
-                                        <div class="text-muted" style="font-size: 0.72rem;">Trả khi nhận hàng</div>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <!-- 2. Ví MoMo -->
-                            <div class="col-6">
-                                <input type="radio" asp-for="PaymentMethod" value="Ví Momo" id="payMomo" class="btn-check payment-radio" />
-                                <label class="pay-card w-100 p-2 rounded-3 d-flex align-items-center gap-2" for="payMomo">
-                                    <div class="rounded-2 d-flex align-items-center justify-content-center text-white fw-bold" style="width: 42px; height: 42px; background-color: #a50064; font-size: 0.72rem; line-height: 1;">
-                                        mo<br>mo
-                                    </div>
-                                    <div class="text-start lh-sm">
-                                        <div class="fw-bold" style="color: #a50064; font-size: 0.875rem;">Ví MoMo</div>
-                                        <div class="text-muted" style="font-size: 0.72rem;">Quét mã QR động</div>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <!-- 3. ATM Napas -->
-                            <div class="col-6">
-                                <input type="radio" asp-for="PaymentMethod" value="Chuyển khoản Ngân hàng (ATM)" id="payATM" class="btn-check payment-radio" />
-                                <label class="pay-card w-100 p-2 rounded-3 d-flex align-items-center gap-2" for="payATM">
-                                    <div class="rounded-2 d-flex align-items-center justify-content-center text-white fw-bold" style="width: 42px; height: 42px; background: linear-gradient(135deg, #005baa, #0088cc); font-size: 0.7rem;">
-                                        ATM
-                                    </div>
-                                    <div class="text-start lh-sm">
-                                        <div class="fw-bold text-primary small">Thẻ ATM / Napas</div>
-                                        <div class="text-muted" style="font-size: 0.72rem;">Ngân hàng nội địa</div>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <!-- 4. Visa / Mastercard -->
-                            <div class="col-6">
-                                <input type="radio" asp-for="PaymentMethod" value="Visa Card" id="payVisa" class="btn-check payment-radio" />
-                                <label class="pay-card w-100 p-2 rounded-3 d-flex align-items-center gap-2" for="payVisa">
-                                    <div class="rounded-2 d-flex align-items-center justify-content-center text-warning fw-bold fst-italic" style="width: 42px; height: 42px; background-color: #1a1f71; font-size: 0.75rem;">
-                                        VISA
-                                    </div>
-                                    <div class="text-start lh-sm">
-                                        <div class="fw-bold text-dark small">Thẻ Quốc Tế</div>
-                                        <div class="text-muted" style="font-size: 0.72rem;">Visa / Mastercard</div>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Danh sách chi tiết từng lá bài trong giỏ hàng -->
-                        <div class="p-3 rounded-3 mb-3" style="background-color: #f8f9fa; border: 1px solid #e9ecef;">
-                            <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
-                                <span class="fw-bold small text-secondary">CHI TIẾT ĐƠN HÀNG (@totalQty LÁ BÀI)</span>
-                                <a asp-action="Index" class="small text-decoration-none">Sửa giỏ</a>
-                            </div>
-
-                            <div style="max-height: 140px; overflow-y: auto;">
-                                @if (cartLines != null && cartLines.Any())
-                                {
-                                    foreach (var line in cartLines)
-                                    {
-                                        decimal lineTotal = Convert.ToDecimal(line.Product.Price) * line.Quantity;
-                                        <div class="d-flex justify-content-between align-items-center py-1 small">
-                                            <span class="text-truncate pe-2" style="max-width: 230px;" title="@line.Product.Name">
-                                                <strong>@(line.Quantity)x</strong> @line.Product.Name
-                                            </span>
-                                            <span class="fw-semibold text-dark">@lineTotal.ToString("N0")đ</span>
-                                        </div>
-                                    }
-                                }
-                            </div>
-                        </div>
+            <!-- ============================================================= -->
+            <!-- CỘT PHẢI (5 PHẦN): TÓM TẮT ĐƠN HÀNG & NÚT ĐẶT HÀNG (STICKY)   -->
+            <!-- ============================================================= -->
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 20px;">
+                    <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark mb-0">
+                            Đơn hàng của bạn <span class="badge bg-dark rounded-pill ms-1">@totalCards</span>
+                        </h5>
+                        <a asp-controller="Cart" asp-action="Index" class="small fw-semibold text-primary text-decoration-none">
+                            <i class="bi bi-pencil-square me-1"></i>Sửa giỏ
+                        </a>
                     </div>
 
-                    <!-- Tổng thanh toán & nút Submit -->
-                    <div>
-                        <div class="d-flex justify-content-between small text-muted mb-1">
-                            <span>Phí vận chuyển toàn quốc</span>
-                            <span class="text-success fw-bold">Miễn phí</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center pt-2 border-top mb-3">
-                            <span class="fw-bold fs-6">Tổng thanh toán</span>
-                            <span class="fs-4 fw-bold text-danger">@totalAmount.ToString("N0")đ</span>
+                    <div class="card-body p-4">
+                        <!-- Danh sách các lá bài trong giỏ hàng -->
+                        <div class="checkout-item-list pe-1 mb-3">
+                            @if (cartItems.Any())
+                            {
+                                foreach (var item in cartItems)
+                                {
+                                    decimal lineTotal = item.Product.Price * item.Quantity;
+                                    <div class="d-flex align-items-center justify-content-between gap-3 py-2 border-bottom">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <!-- Ảnh thu nhỏ lá bài -->
+                                            <div class="item-thumb-box">
+                                                @if (!string.IsNullOrEmpty(item.Product.ImageUrl))
+                                                {
+                                                    <img src="@item.Product.ImageUrl" alt="@item.Product.Name" />
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-card-image text-muted"></i>
+                                                }
+                                                <span class="item-qty-badge">@item.Quantity</span>
+                                            </div>
+
+                                            <div>
+                                                <div class="fw-bold text-dark small">@item.Product.Name</div>
+                                                <div class="text-muted" style="font-size: 0.75rem;">
+                                                    Hệ @item.Product.ElementType • @item.Product.Price.ToString("N0")đ / lá
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="fw-bold text-dark small text-nowrap">
+                                            @lineTotal.ToString("N0")đ
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center text-muted small py-3">Giỏ hàng hiện đang trống.</div>
+                            }
                         </div>
 
-                        <button type="submit" id="submitBtn" class="btn w-100 py-3 text-white fw-bold fs-6 shadow-sm" style="background-color: #0b2240; border-radius: 10px; transition: all 0.25s;">
-                            HOÀN TẤT ĐẶT HÀNG (COD)
+                        <!-- Cam kết đóng gói chuyên dụng cho thẻ bài sưu tầm -->
+                        <div class="p-2 px-3 rounded-3 bg-light border small text-secondary d-flex align-items-center gap-2 mb-3">
+                            <i class="bi bi-box2-heart text-primary fs-5"></i>
+                            <span>Miễn phí bọc <strong>Sleeve + Toploader</strong> chống cong gãy thẻ bài.</span>
+                        </div>
+
+                        <!-- Bảng tính chi tiết tiền -->
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Tạm tính (@totalCards lá bài)</span>
+                            <span class="fw-semibold text-dark">@totalAmount.ToString("N0")đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Phí vận chuyển tiêu chuẩn</span>
+                            <span class="fw-semibold text-success">Miễn phí</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted pb-3 border-bottom">
+                            <span>Bảo hiểm thất lạc hàng hóa</span>
+                            <span class="fw-semibold text-success">0đ</span>
+                        </div>
+
+                        <!-- Tổng thanh toán cuối cùng -->
+                        <div class="d-flex justify-content-between align-items-center my-3">
+                            <div>
+                                <div class="fw-bold text-dark">Tổng thanh toán</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Đã bao gồm VAT</div>
+                            </div>
+                            <div class="fs-3 fw-bold text-danger" style="font-variant-numeric: tabular-nums;">
+                                @totalAmount.ToString("N0")đ
+                            </div>
+                        </div>
+
+                        <!-- Nút xác nhận đặt hàng (Tự động đổi text & màu theo phương thức thanh toán) -->
+                        <button type="submit" id="submitCheckoutBtn"
+                                class="btn btn-dark btn-lg w-100 fw-bold py-3 rounded-3 d-flex align-items-center justify-content-center gap-2 shadow-sm">
+                            <i class="bi bi-bag-check" id="submitBtnIcon"></i>
+                            <span id="submitBtnText">HOÀN TẤT ĐẶT HÀNG (COD)</span>
                         </button>
+
+                        <p class="text-center text-muted mt-3 mb-0" style="font-size: 0.75rem;">
+                            Bằng việc nhấn đặt hàng, bạn đồng ý với <span class="text-decoration-underline">Chính sách giao nhận & Đổi trả</span> của Ultra Pokemon Store.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -180,98 +361,277 @@
     </form>
 </div>
 
-<!-- JavaScript: Tự động đổi nội dung hướng dẫn và màu nút Submit theo phương thức được chọn -->
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const radios = document.querySelectorAll('.payment-radio');
-        const guideBox = document.getElementById('methodGuideBox');
-        const guideIcon = document.getElementById('guideIcon');
-        const guideTitle = document.getElementById('guideTitle');
-        const guideDesc = document.getElementById('guideDesc');
-        const submitBtn = document.getElementById('submitBtn');
+<style>
+    /* Logo & Stepper đầu trang */
+    .checkout-brand-badge {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: #0f172a;
+        color: #facc15;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+    }
 
-        const paymentConfig = {
-            'Tiền mặt (COD)': {
-                icon: '🚚',
-                title: 'Thanh toán tiền mặt khi nhận hàng (COD)',
-                desc: 'Bạn được kiểm tra ngoại quan gói hàng trước khi thanh toán trực tiếp cho nhân viên giao hàng.',
-                bg: 'rgba(25, 135, 84, 0.15)',
-                border: 'rgba(25, 135, 84, 0.4)',
-                titleColor: '#75b798',
-                btnText: 'HOÀN TẤT ĐẶT HÀNG (COD)',
-                btnColor: '#0b2240'
-            },
-            'Ví Momo': {
-                icon: '📱',
-                title: 'Chuyển hướng sang Cổng thanh toán MoMo QR',
-                desc: 'Hệ thống sẽ tạo mã QR động chứa sẵn số tiền và mã đơn hàng để bạn quét bằng App MoMo hoặc App Ngân hàng.',
-                bg: 'rgba(165, 0, 100, 0.2)',
-                border: 'rgba(216, 45, 139, 0.5)',
-                titleColor: '#f783ac',
-                btnText: 'TIẾP TỤC THANH TOÁN MOMO →',
-                btnColor: '#a50064'
-            },
-            'Chuyển khoản Ngân hàng (ATM)': {
-                icon: '🏦',
-                title: 'Cổng thanh toán Thẻ ATM Nội địa (Napas)',
-                desc: 'Hỗ trợ hơn 40 ngân hàng Việt Nam (VCB, MB, Techcombank, ACB, BIDV...) với xác thực bảo mật OTP.',
-                bg: 'rgba(13, 110, 253, 0.15)',
-                border: 'rgba(13, 110, 253, 0.45)',
-                titleColor: '#6ea8fe',
-                btnText: 'TIẾP TỤC ĐẾN CỔNG NGÂN HÀNG →',
-                btnColor: '#005baa'
-            },
-            'Visa Card': {
-                icon: '💳',
-                title: 'Cổng thanh toán Thẻ Quốc tế Visa / Mastercard',
-                desc: 'Thanh toán an toàn chuẩn quốc tế PCI-DSS & 3D-Secure. Hỗ trợ thẻ Credit và Debit.',
-                bg: 'rgba(255, 193, 7, 0.15)',
-                border: 'rgba(255, 193, 7, 0.45)',
-                titleColor: '#ffda6a',
-                btnText: 'TIẾP TỤC THANH TOÁN THẺ QUỐC TẾ →',
-                btnColor: '#1a1f71'
-            }
-        };
+    .step-circle {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        color: #64748b;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
 
-        function updatePaymentUI() {
-            const checkedRadio = document.querySelector('.payment-radio:checked');
-            if (!checkedRadio) return;
-
-            const item = paymentConfig[checkedRadio.value];
-            if (!item) return;
-
-            guideIcon.textContent = item.icon;
-            guideTitle.textContent = item.title;
-            guideTitle.style.color = item.titleColor;
-            guideDesc.textContent = item.desc;
-            guideBox.style.backgroundColor = item.bg;
-            guideBox.style.borderColor = item.border;
-
-            submitBtn.textContent = item.btnText;
-            submitBtn.style.backgroundColor = item.btnColor;
+        .step-circle.step-done {
+            background: #16a34a;
+            color: #ffffff;
         }
 
-        updatePaymentUI();
-        radios.forEach(r => r.addEventListener('change', updatePaymentUI));
-    });
-</script>
+        .step-circle.step-active {
+            background: #1d4ed8;
+            color: #ffffff;
+        }
 
-<style>
-    .pay-card {
-        border: 2px solid #e9ecef;
-        background-color: #fff;
+    /* Số thứ tự tiêu đề từng khối */
+    .section-number {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: #0f172a;
+        color: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Tùy chỉnh ô chọn Phương thức thanh toán */
+    .payment-option-card {
+        display: block;
         cursor: pointer;
+        margin: 0;
+        position: relative;
+    }
+
+    .payment-radio {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .payment-card-inner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
         transition: all 0.2s ease;
     }
 
-        .pay-card:hover {
-            border-color: #adb5bd;
-            background-color: #f8f9fa;
+        .payment-card-inner:hover {
+            border-color: #94a3b8;
+            background: #f8fafc;
         }
 
-    .btn-check:checked + .pay-card {
+    .payment-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .icon-cod {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .icon-momo {
+        background: #fce7f3;
+        color: #a50064;
+    }
+
+    .icon-atm {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .icon-visa {
+        background: #e0e7ff;
+        color: #3730a3;
+    }
+
+    .check-mark {
+        font-size: 1.15rem;
+        color: #cbd5e1;
+        transition: color 0.2s ease;
+    }
+
+    /* Trạng thái Active từng cổng thanh toán */
+    .payment-option-card[data-theme="cod"] .payment-radio:checked + .payment-card-inner {
+        border-color: #16a34a;
+        background: #f0fdf4;
+    }
+
+        .payment-option-card[data-theme="cod"] .payment-radio:checked + .payment-card-inner .check-mark {
+            color: #16a34a;
+        }
+
+    .payment-option-card[data-theme="momo"] .payment-radio:checked + .payment-card-inner {
         border-color: #a50064;
-        background-color: #fff5f9;
-        box-shadow: 0 4px 12px rgba(165, 0, 100, 0.12);
+        background: #fdf2f8;
+    }
+
+        .payment-option-card[data-theme="momo"] .payment-radio:checked + .payment-card-inner .check-mark {
+            color: #a50064;
+        }
+
+    .payment-option-card[data-theme="atm"] .payment-radio:checked + .payment-card-inner {
+        border-color: #1d4ed8;
+        background: #eff6ff;
+    }
+
+        .payment-option-card[data-theme="atm"] .payment-radio:checked + .payment-card-inner .check-mark {
+            color: #1d4ed8;
+        }
+
+    .payment-option-card[data-theme="visa"] .payment-radio:checked + .payment-card-inner {
+        border-color: #3730a3;
+        background: #eef2ff;
+    }
+
+        .payment-option-card[data-theme="visa"] .payment-radio:checked + .payment-card-inner .check-mark {
+            color: #3730a3;
+        }
+
+    /* Danh sách sản phẩm & ảnh thu nhỏ ở cột Tóm tắt đơn hàng */
+    .checkout-item-list {
+        max-height: 270px;
+        overflow-y: auto;
+    }
+
+    .item-thumb-box {
+        width: 48px;
+        height: 62px;
+        border-radius: 8px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+        .item-thumb-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 7px;
+        }
+
+    .item-qty-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        background: #0f172a;
+        color: #ffffff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        min-width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 5px;
+        border: 2px solid #ffffff;
     }
 </style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const radios = document.querySelectorAll(".payment-radio");
+            const noticeBox = document.getElementById("paymentNoticeBox");
+            const noticeText = document.getElementById("paymentNoticeText");
+            const submitBtn = document.getElementById("submitCheckoutBtn");
+            const submitBtnText = document.getElementById("submitBtnText");
+            const submitBtnIcon = document.getElementById("submitBtnIcon");
+
+            // Cấu hình nội dung hướng dẫn & màu nút bấm tương ứng từng cổng thanh toán
+            const paymentConfigs = {
+                "Tiền mặt (COD)": {
+                    boxClass: "mt-3 p-3 rounded-3 bg-success-subtle text-success-emphasis border border-success-subtle small d-flex align-items-start gap-2",
+                    iconClass: "bi bi-truck fs-5",
+                    text: "<strong>Thanh toán tiền mặt khi nhận hàng (COD):</strong> Bạn được đồng kiểm ngoại quan hộp hàng và tem niêm phong trước khi thanh toán cho bưu tá.",
+                    btnStyle: "background-color: #0f172a; border-color: #0f172a;",
+                    btnIcon: "bi bi-bag-check",
+                    btnLabel: "HOÀN TẤT ĐẶT HÀNG (COD)"
+                },
+                "Ví Momo": {
+                    boxClass: "mt-3 p-3 rounded-3 small d-flex align-items-start gap-2",
+                    customBoxStyle: "background-color: #fdf2f8; color: #831843; border: 1px solid #fbcfe8;",
+                    iconClass: "bi bi-qr-code-scan fs-5",
+                    text: "<strong>Thanh toán qua Ví MoMo:</strong> Hệ thống sẽ chuyển sang cổng mã VietQR động kèm nội dung chuyển khoản tự động để xác nhận đơn ngay lập tức.",
+                    btnStyle: "background-color: #a50064; border-color: #a50064;",
+                    btnIcon: "bi bi-qr-code",
+                    btnLabel: "TIẾP TỤC THANH TOÁN VÍ MOMO"
+                },
+                "Chuyển khoản Ngân hàng (ATM)": {
+                    boxClass: "mt-3 p-3 rounded-3 bg-primary-subtle text-primary-emphasis border border-primary-subtle small d-flex align-items-start gap-2",
+                    iconClass: "bi bi-bank fs-5",
+                    text: "<strong>Cổng thanh toán nội địa ATM / Napas:</strong> Hỗ trợ thẻ ghi nợ nội địa của hơn 40 ngân hàng Việt Nam (Vietcombank, Techcombank, MB, ACB...) xác thực OTP 24/7.",
+                    btnStyle: "background-color: #1d4ed8; border-color: #1d4ed8;",
+                    btnIcon: "bi bi-shield-check",
+                    btnLabel: "TIẾP TỤC CỔNG ATM / NAPAS"
+                },
+                "Visa Card": {
+                    boxClass: "mt-3 p-3 rounded-3 small d-flex align-items-start gap-2",
+                    customBoxStyle: "background-color: #eef2ff; color: #1e1b4b; border: 1px solid #c7d2fe;",
+                    iconClass: "bi bi-credit-card-2-front fs-5",
+                    text: "<strong>Thanh toán Thẻ Quốc Tế (Visa / Mastercard):</strong> Giao dịch được bảo vệ bởi lớp xác thực 3D-Secure tiêu chuẩn quốc tế PCI-DSS.",
+                    btnStyle: "background-color: #312e81; border-color: #312e81;",
+                    btnIcon: "bi bi-lock-fill",
+                    btnLabel: "THANH TOÁN THẺ QUỐC TẾ"
+                }
+            };
+
+            function updateCheckoutUI(selectedValue) {
+                const cfg = paymentConfigs[selectedValue] || paymentConfigs["Tiền mặt (COD)"];
+
+                noticeBox.className = cfg.boxClass;
+                noticeBox.style.cssText = cfg.customBoxStyle || "";
+                noticeBox.querySelector("i").className = cfg.iconClass;
+                noticeText.innerHTML = cfg.text;
+
+                submitBtn.style.cssText = cfg.btnStyle;
+                submitBtnIcon.className = cfg.btnIcon;
+                submitBtnText.textContent = cfg.btnLabel;
+            }
+
+            // Lắng nghe sự kiện khi khách đổi phương thức thanh toán
+            radios.forEach(radio => {
+                radio.addEventListener("change", function () {
+                    if (this.checked) {
+                        updateCheckoutUI(this.value);
+                    }
+                });
+            });
+        });
+    </script>
+}

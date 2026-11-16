@@ -1,101 +1,337 @@
 @model IEnumerable<UltraPokemon.Models.Product>
+@using UltraPokemon.Data
+@using UltraPokemon.Models
+@inject AppDbContext _db
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment _env
 @{
-    ViewData["Title"] = "Danh sách thẻ bài";
-    var elements = (List<string>)ViewBag.Elements;
-    string? current = ViewBag.CurrentElement;
-    string? keyword = ViewBag.CurrentFilter;
-    string? sort = ViewBag.CurrentSort;
-    string? note = ViewBag.SearchNote;
-}
+    ViewData["Title"] = "Danh sách thẻ bài Pokémon";
 
-<div class="d-flex justify-content-between align-items-center">
-    <h2 class="my-4">Danh Sách Thẻ Bài Pokémon</h2>
+    // 1. Lấy các tham số lọc từ thanh địa chỉ URL
+    string searchString = Context.Request.Query["searchString"].ToString().Trim();
+    string selectedElement = Context.Request.Query["elementType"].ToString().Trim();
+    string sortOrder = Context.Request.Query["sortOrder"].ToString().Trim();
 
-    <!-- CHỈ ADMIN MỚI THẤY NÚT THÊM THẺ BÀI -->
-    @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+    // 2. Lấy toàn bộ danh sách sản phẩm gốc để trích xuất danh sách Hệ nguyên tố
+    var allProducts = _db.Products.ToList();
+    var availableElements = allProducts
+        .Where(p => !string.IsNullOrWhiteSpace(p.ElementType))
+        .Select(p => p.ElementType.Trim())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(e => e)
+        .ToList();
+
+    // 3. Nguồn dữ liệu hiển thị (Ưu tiên Model từ Controller; tự động lọc bổ sung theo Hệ & Sắp xếp)
+    IEnumerable<Product> query = (Model != null) ? Model : allProducts;
+
+    if (!string.IsNullOrWhiteSpace(selectedElement))
     {
-        <a asp-action="Create" class="btn btn-success btn-sm">+ Thêm thẻ bài</a>
+        query = query.Where(p => string.Equals(p.ElementType?.Trim(), selectedElement, StringComparison.OrdinalIgnoreCase));
     }
-</div>
 
-@* Ô tìm kiếm theo tên: tìm là bỏ lọc Hệ để ra đúng thẻ khách gò *@
-<form asp-action="Index" method="get" class="row g-2 align-items-end mb-3">
-    <div class="col-md-6">
-        <input type="text" name="searchString" value="@keyword" class="form-control"
-               placeholder="Nhập tên lá bài (ví dụ: Charizard)..." />
-    </div>
-    <div class="col-md-3">
-        <select name="sortOrder" class="form-select">
-            <option value="" selected="@(string.IsNullOrEmpty(sort))">Sắp xếp mặc định</option>
-            <option value="name_desc" selected="@(sort == "name_desc")">Tên Z → A</option>
-            <option value="price_asc" selected="@(sort == "price_asc")">Giá tăng dần</option>
-            <option value="price_desc" selected="@(sort == "price_desc")">Giá giảm dần</option>
-            <option value="power_desc" selected="@(sort == "power_desc")">Sức mạnh cao → thấp</option>
-        </select>
-    </div>
-    <div class="col-md-3">
-        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
-        <a asp-action="Index" class="btn btn-outline-secondary">Xóa lọc</a>
-    </div>
-</form>
-
-@* Nút lọc theo Hệ: bấm "Hệ Lửa" là chỉ hiện bài Hệ Lửa *@
-<div class="mb-3">
-    <span class="me-1">Lọc theo Hệ:</span>
-    <a asp-action="Index" asp-route-sortOrder="@sort"
-       class="btn btn-sm @(string.IsNullOrEmpty(current) ? "btn-dark" : "btn-outline-dark")">Tất cả</a>
-    @foreach (var el in elements)
+    query = sortOrder switch
     {
-        <a asp-action="Index" asp-route-elementType="@el" asp-route-sortOrder="@sort"
-           class="btn btn-sm @ElementHelper.Button(el, el == current)">@el</a>
-    }
-</div>
+        "price_asc" => query.OrderBy(p => p.Price),
+        "price_desc" => query.OrderByDescending(p => p.Price),
+        "name_asc" => query.OrderBy(p => p.Name),
+        "newest" => query.OrderByDescending(p => p.Id),
+        _ => query
+    };
 
-@if (!string.IsNullOrWhiteSpace(keyword) || !string.IsNullOrEmpty(current))
-{
-    <p class="small mb-1">
-        Đang hiển thị:
-        @if (!string.IsNullOrWhiteSpace(keyword))
-        {
-            <span class="badge bg-dark">Tên: @keyword</span>
-        }
-        @if (!string.IsNullOrEmpty(current))
-        {
-            <span class="badge bg-@ElementHelper.Color(current)">@current</span>
-        }
-        <a asp-action="Index" class="ms-1">Bỏ lọc</a>
-    </p>
-}
+    var productList = query.ToList();
+    bool hasActiveFilter = !string.IsNullOrWhiteSpace(searchString)
+                        || !string.IsNullOrWhiteSpace(selectedElement)
+                        || !string.IsNullOrWhiteSpace(sortOrder);
 
-@if (!string.IsNullOrEmpty(note))
-{
-    <div class="alert alert-info py-2 small">@note</div>
-}
-
-<p class="text-muted small">Tìm thấy <strong>@Model.Count()</strong> thẻ bài.</p>
-<hr />
-
-<div class="row">
-    @if (Model.Any())
+    // 4. Hàm tự động tìm đường dẫn ảnh thẻ bài (Hỗ trợ ImageUrl và file ảnh trong wwwroot/images)
+    string ResolveCardImage(Product p)
     {
-        foreach (var item in Model)
+        if (!string.IsNullOrWhiteSpace(p.ImageUrl))
         {
-            <div class="col-6 col-md-3 mb-4">
-                <partial name="_ProductCard" model="item" />
+            return p.ImageUrl.StartsWith("~") ? Url.Content(p.ImageUrl) : p.ImageUrl;
+        }
 
-                <!-- CHỈ ADMIN MỚI THẤY CÁC NÚT SỬA / XÓA DƯỚI MỖI THẺ BÀI -->
-                @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+        if (!string.IsNullOrEmpty(_env.WebRootPath))
+        {
+            var imagesDir = System.IO.Path.Combine(_env.WebRootPath, "images");
+            if (System.IO.Directory.Exists(imagesDir))
+            {
+                var rawName = p.Name.Trim();
+                var slugName = rawName.ToLowerInvariant().Replace(" ", "-");
+                var plainName = rawName.ToLowerInvariant().Replace(" ", "");
+
+                var matchedFile = System.IO.Directory
+                    .EnumerateFiles(imagesDir, "*.*", System.IO.SearchOption.AllDirectories)
+                    .FirstOrDefault(f =>
+                    {
+                        var fileName = System.IO.Path.GetFileNameWithoutExtension(f);
+                        return fileName.Equals(rawName, StringComparison.OrdinalIgnoreCase)
+                            || fileName.Equals(slugName, StringComparison.OrdinalIgnoreCase)
+                            || fileName.Equals(plainName, StringComparison.OrdinalIgnoreCase)
+                            || fileName.Equals(p.Id.ToString(), StringComparison.OrdinalIgnoreCase);
+                    });
+
+                if (matchedFile != null)
                 {
-                    <div class="small text-center mt-1">
-                        <a asp-action="Edit" asp-route-id="@item.Id">Sửa</a> |
-                        <a asp-action="Delete" asp-route-id="@item.Id">Xóa</a>
-                    </div>
+                    return "/" + System.IO.Path.GetRelativePath(_env.WebRootPath, matchedFile).Replace("\\", "/");
                 }
-            </div>
+            }
         }
+
+        return string.Empty;
+    }
+}
+
+<div class="container py-3">
+    <!-- ===================================================================== -->
+    <!-- 1. KHỐI TIÊU ĐỀ & BỘ LỌC TÌM KIẾM (NỀN TRẮNG TƯƠNG PHẢN CAO)          -->
+    <!-- ===================================================================== -->
+    <div class="bg-white rounded-4 shadow-sm p-4 mb-4">
+        <!-- Dòng tiêu đề & Bộ đếm kết quả -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-3 mb-3 border-bottom">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">Danh Sách Thẻ Bài Pokémon</h3>
+                <p class="text-muted small mb-0">
+                    Tìm thấy <strong class="text-primary">@productList.Count</strong> thẻ bài phù hợp
+                    @if (!string.IsNullOrWhiteSpace(searchString))
+                    {
+                        <span>cho từ khóa "<strong>@searchString</strong>"</span>
+                    }
+                </p>
+            </div>
+
+            <!-- Nút Đặt lại bộ lọc (Chỉ nổi bật khi đang có điều kiện lọc) -->
+            @if (hasActiveFilter)
+            {
+                <a asp-controller="Product" asp-action="Index"
+                   class="btn btn-sm btn-outline-danger fw-semibold px-3 rounded-3 d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-x-circle"></i>
+                    <span>Xóa bộ lọc</span>
+                </a>
+            }
+        </div>
+
+        <!-- Form Tìm kiếm & Sắp xếp -->
+        <form asp-controller="Product" asp-action="Index" method="get" class="row g-2 align-items-center mb-3">
+            @if (!string.IsNullOrWhiteSpace(selectedElement))
+            {
+                <input type="hidden" name="elementType" value="@selectedElement" />
+            }
+
+            <!-- Ô nhập từ khóa -->
+            <div class="col-lg-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 text-muted">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="search" name="searchString" value="@searchString"
+                           class="form-control border-start-0 ps-1"
+                           placeholder="Nhập tên lá bài (ví dụ: Charizard, Pikachu)..." />
+                </div>
+            </div>
+
+            <!-- Dropdown sắp xếp -->
+            <div class="col-sm-8 col-lg-4">
+                <select name="sortOrder" class="form-select" onchange="this.form.submit()">
+                    <option value="" selected="@(string.IsNullOrEmpty(sortOrder))">Sắp xếp mặc định</option>
+                    <option value="price_asc" selected="@(sortOrder == "price_asc")">Giá: Thấp đến Cao</option>
+                    <option value="price_desc" selected="@(sortOrder == "price_desc")">Giá: Cao đến Thấp</option>
+                    <option value="name_asc" selected="@(sortOrder == "name_asc")">Tên thẻ: A → Z</option>
+                    <option value="newest" selected="@(sortOrder == "newest")">Mới cập nhật</option>
+                </select>
+            </div>
+
+            <!-- Nút Tìm kiếm -->
+            <div class="col-sm-4 col-lg-2">
+                <button type="submit" class="btn btn-primary fw-semibold w-100 d-inline-flex align-items-center justify-content-center gap-1">
+                    <i class="bi bi-search"></i>
+                    <span>Tìm kiếm</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Dải nút lọc nhanh theo Hệ nguyên tố -->
+        <div class="d-flex flex-wrap align-items-center gap-2 pt-2 border-top">
+            <span class="text-muted small fw-semibold me-1">Lọc theo Hệ:</span>
+
+            <a asp-controller="Product" asp-action="Index"
+               asp-route-searchString="@searchString"
+               asp-route-sortOrder="@sortOrder"
+               class="tcg-filter-pill @(string.IsNullOrEmpty(selectedElement) ? "active" : "")">
+                Tất cả (@allProducts.Count)
+            </a>
+
+            @foreach (var el in availableElements)
+            {
+                bool isActive = string.Equals(selectedElement, el, StringComparison.OrdinalIgnoreCase);
+                <a asp-controller="Product" asp-action="Index"
+                   asp-route-elementType="@el"
+                   asp-route-searchString="@searchString"
+                   asp-route-sortOrder="@sortOrder"
+                   class="tcg-filter-pill @(isActive ? "active" : "")">
+                    @el
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 2. LƯỚI HIỂN THỊ DANH SÁCH THẺ BÀI                                    -->
+    <!-- ===================================================================== -->
+    @if (!productList.Any())
+    {
+        <div class="bg-white rounded-4 shadow-sm p-5 text-center">
+            <div class="text-muted mb-2"><i class="bi bi-search fs-1"></i></div>
+            <h5 class="fw-bold text-dark mb-1">Không tìm thấy thẻ bài nào</h5>
+            <p class="text-muted small mb-3">Thử tìm với tên Pokémon khác hoặc xóa bớt điều kiện lọc hiện tại.</p>
+            <a asp-controller="Product" asp-action="Index" class="btn btn-primary fw-semibold px-4">
+                Xem tất cả thẻ bài
+            </a>
+        </div>
     }
     else
     {
-        <div class="alert alert-warning text-center">Không tìm thấy lá bài nào phù hợp!</div>
+        <div class="row g-4">
+            @foreach (var item in productList)
+            {
+                bool inStock = item.Stock > 0;
+                string cardImg = ResolveCardImage(item);
+
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden tcg-product-card">
+                        <!-- Khung ảnh lá bài -->
+                        <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
+                           class="tcg-img-stage text-decoration-none position-relative">
+                            @if (!string.IsNullOrEmpty(cardImg))
+                            {
+                                <img src="@cardImg" alt="@item.Name" class="tcg-card-photo" loading="lazy" />
+                            }
+                            else
+                            {
+                                <div class="text-center text-muted p-4">
+                                    <i class="bi bi-card-image fs-1 d-block mb-1"></i>
+                                    <span class="small">Chưa có ảnh</span>
+                                </div>
+                            }
+
+                            <!-- Nhãn tồn kho -->
+                            <span class="badge @(inStock ? "bg-dark bg-opacity-75" : "bg-danger") position-absolute top-0 end-0 m-2 px-2 py-1">
+                                @(inStock ? $"Còn {item.Stock}" : "Hết hàng")
+                            </span>
+                        </a>
+
+                        <!-- Nội dung chi tiết thẻ -->
+                        <div class="card-body d-flex flex-column p-3">
+                            <div class="mb-1">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size: 0.72rem;">
+                                    Hệ @(string.IsNullOrWhiteSpace(item.ElementType) ? "Phổ thông" : item.ElementType)
+                                </span>
+                            </div>
+
+                            <h6 class="fw-bold text-dark mb-2 text-truncate" title="@item.Name">
+                                <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
+                                   class="text-dark text-decoration-none">
+                                    @item.Name
+                                </a>
+                            </h6>
+
+                            <div class="mt-auto pt-2 border-top">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-muted small">Giá bán:</span>
+                                    <span class="fw-bold text-danger fs-5" style="font-variant-numeric: tabular-nums;">
+                                        @item.Price.ToString("N0")đ
+                                    </span>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
+                                       class="btn btn-outline-secondary btn-sm fw-semibold flex-grow-1">
+                                        Xem chi tiết
+                                    </a>
+
+                                    @if (inStock)
+                                    {
+                                        <form asp-controller="Cart" asp-action="Add" method="post" class="flex-grow-1 m-0">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                                            <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100 d-inline-flex align-items-center justify-content-center gap-1">
+                                                <i class="bi bi-bag-plus"></i>
+                                                <span>Thêm vào giỏ hàng</span>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-secondary btn-sm flex-grow-1" disabled>
+                                            Tạm hết
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
     }
 </div>
+
+<style>
+    /* Nút lọc nhanh theo Hệ nguyên tố */
+    .tcg-filter-pill {
+        display: inline-block;
+        padding: 5px 14px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        background-color: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        transition: all 0.15s ease;
+    }
+
+        .tcg-filter-pill:hover {
+            background-color: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .tcg-filter-pill.active {
+            background-color: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+        }
+
+    /* Card hiển thị lá bài */
+    .tcg-product-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+        .tcg-product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14) !important;
+        }
+
+    .tcg-img-stage {
+        height: 245px;
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 14px;
+        overflow: hidden;
+    }
+
+    .tcg-card-photo {
+        max-height: 100%;
+        max-width: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+        transition: transform 0.25s ease;
+        filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.14));
+    }
+
+    .tcg-product-card:hover .tcg-card-photo {
+        transform: scale(1.05);
+    }
+</style>

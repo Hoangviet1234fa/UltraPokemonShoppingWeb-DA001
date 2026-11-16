@@ -1,22 +1,34 @@
 ﻿@{
-    // Lấy giá trị chuỗi tìm kiếm hiện tại từ thanh địa chỉ URL để giữ lại từ khóa trên ô input khi chuyển trang
+    // 1. Lấy từ khóa tìm kiếm hiện tại trên URL để giữ lại trong ô input
     var currentSearch = Context.Request.Query["searchString"].ToString();
+
+    // 2. Lấy Controller & Action hiện tại để làm nổi bật tab menu đang mở
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+
+    // 3. Đếm tổng số lượng lá bài đang có trong Session giỏ hàng
+    int cartCount = UltraPokemon.Helpers.CartSession.Count(Context.Session);
+
+    // 4. Rút gọn tên hiển thị từ Email (VD: "admin@ultrapokemon.com" -> "admin")
+    var userEmail = User.Identity?.Name ?? "";
+    var displayName = userEmail.Contains('@') ? userEmail.Split('@')[0] : userEmail;
 }
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Ultra Pokemon</title>
+    <title>@ViewData["Title"] - Ultra Pokémon TCG</title>
 
-    <!-- Nhúng thư viện CSS Bootstrap 5.3.3 từ CDN và file CSS tùy chỉnh của dự án -->
+    <!-- Nhúng Bootstrap 5.3.3, Bootstrap Icons (vector nét mảnh) và CSS tùy chỉnh -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
- 
-    <!-- 1. VIDEO NỀN TOÀN MÀN HÌNH (BACKGROUND VIDEO)  -->
-
+    <!-- ===================================================================== -->
+    <!-- 1. VIDEO NỀN TOÀN MÀN HÌNH (BACKGROUND VIDEO)                         -->
+    <!-- ===================================================================== -->
     <div class="video-background-container">
         <video autoplay muted loop playsinline class="bg-video">
             <source src="~/videos/bg-video.mp4" type="video/mp4" />
@@ -25,153 +37,272 @@
         <div class="video-overlay"></div>
     </div>
 
-    <!-- 2. HIỆU ỨNG ĐỐM SÁNG DI CHUYỂN THEO CON TRỎ CHUỘT (MOUSE GLOW)   -->
-    
+    <!-- ===================================================================== -->
+    <!-- 2. HIỆU ỨNG ĐỐM SÁNG DI CHUYỂN THEO CON TRỎ CHUỘT (MOUSE GLOW)        -->
+    <!-- ===================================================================== -->
     <div class="mouse-glow"></div>
 
-    <!-- 3. KHUNG NỘI DUNG CHÍNH CỦA WEBSITE  -->
- 
+    <!-- ===================================================================== -->
+    <!-- 3. KHUNG NỘI DUNG CHÍNH CỦA WEBSITE                                   -->
+    <!-- ===================================================================== -->
     <div class="main-content-wrapper">
-        <header>
-            <!-- Thanh điều hướng (Navbar) cố định phía trên cùng -->
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
+        <header class="up-header sticky-top">
+
+            <!-- TẦNG 1: DẢI CAM KẾT DỊCH VỤ (TOP PROMO BAR) -->
+            <div class="up-topbar d-none d-md-flex align-items-center">
+                <div class="container d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <span>
+                            <i class="bi bi-patch-check-fill text-warning me-1"></i>Thẻ bài Pokémon chính hãng 100%
+                        </span>
+                        <span class="text-white-50">|</span>
+                        
+                    </div>
+                    <div>
+                        <span>
+                            <i class="bi bi-truck text-success me-1"></i>Miễn phí vận chuyển toàn quốc
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TẦNG 2: HEADER CHÍNH (LOGO + TÌM KIẾM + GIỎ HÀNG + TÀI KHOẢN) -->
+            <div class="up-mainbar bg-white border-bottom">
                 <div class="container">
-                    <!-- Logo thương hiệu dẫn về Trang chủ -->
-                    <a class="navbar-brand brand" asp-controller="Home" asp-action="Index">
-                        <span class="text-primary">ULTRA</span> POKEMON
-                    </a>
+                    <div class="d-flex align-items-center justify-content-between gap-3">
 
-                    <!-- Nút thu gọn menu khi hiển thị trên màn hình điện thoại / máy tính bảng -->
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
+                        <!-- Logo thương hiệu kèm biểu tượng Pokéball SVG -->
+                        <a class="up-brand text-decoration-none d-inline-flex align-items-center gap-2 flex-shrink-0"
+                           asp-controller="Home" asp-action="Index">
+                            <svg width="34" height="34" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <circle cx="16" cy="16" r="14.5" fill="#FFFFFF" stroke="#0F172A" stroke-width="2.4" />
+                                <path d="M1.5 16C1.5 7.99187 7.99187 1.5 16 1.5C24.0081 1.5 30.5 7.99187 30.5 16H1.5Z" fill="#DC2626" />
+                                <rect x="1.5" y="14.5" width="29" height="3" fill="#0F172A" />
+                                <circle cx="16" cy="16" r="5" fill="#FFFFFF" stroke="#0F172A" stroke-width="2.4" />
+                                <circle cx="16" cy="16" r="2" fill="#2563EB" />
+                            </svg>
+                            <div class="lh-1">
+                                <span class="up-brand-title">ULTRA <span class="text-primary">POKÉMON</span></span>
+                                <span class="up-brand-sub d-block">TCG MARKETPLACE</span>
+                            </div>
+                        </a>
 
-                    <div class="collapse navbar-collapse" id="mainNav">
-                        <!-- MENU ĐIỀU HƯỚNG BÊN TRÁI -->
-                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                            <li class="nav-item">
-                                <a class="nav-link text-dark fw-bold text-nowrap" asp-controller="Home" asp-action="Index">Trang chủ</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-primary fw-bold text-nowrap" asp-controller="Product" asp-action="Index">Pokemon TCG</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-muted text-nowrap" asp-controller="Home" asp-action="About">Giới thiệu</a>
-                            </li>
-
-                            <!-- Chỉ hiển thị mục "Đơn hàng của tôi" khi người dùng đã đăng nhập -->
-                            @if (User.Identity != null && User.Identity.IsAuthenticated)
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark fw-semibold text-nowrap" asp-controller="Cart" asp-action="MyOrders">Đơn hàng của tôi</a>
-                                </li>
-                            }
-                        </ul>
-
-                        <!-- KHU VỰC CÔNG CỤ BÊN PHẢI (TÌM KIẾM, GIỎ HÀNG, TÀI KHOẢN / ADMIN) -->
-                        <div class="d-flex align-items-center justify-content-end gap-2 ms-auto">
-
-                            <!-- Form tìm kiếm thẻ bài (Gửi truy vấn GET sang ProductController) -->
-                            <form class="d-flex align-items-center me-2" asp-controller="Product" asp-action="Index" method="get">
-                                <input class="form-control form-control-lg me-2" type="search" name="searchString"
-                                       value="@currentSearch" placeholder="Tìm thẻ bài..." aria-label="Search">
-                                <button class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-center" type="submit" title="Tìm kiếm">
-                                    🔍
+                        <!-- Thanh tìm kiếm trung tâm (Cao đúng 42px đồng bộ với các nút bên phải) -->
+                        <form class="up-search-form d-none d-md-flex flex-grow-1"
+                              asp-controller="Product" asp-action="Index" method="get">
+                            <div class="up-search-box d-flex align-items-center w-100">
+                                <span class="ps-3 pe-2 text-muted d-inline-flex align-items-center">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input class="form-control border-0 bg-transparent shadow-none px-1"
+                                       type="search"
+                                       name="searchString"
+                                       value="@currentSearch"
+                                       placeholder="Tìm tên thẻ bài (Charizard, Pikachu...), hệ nguyên tố..."
+                                       aria-label="Tìm kiếm thẻ bài" />
+                                <button class="btn btn-primary up-search-btn fw-semibold px-4" type="submit">
+                                    Tìm kiếm
                                 </button>
-                            </form>
+                            </div>
+                        </form>
 
-                            <!-- Nút mở Giỏ hàng kèm bộ đếm tổng số lượng thẻ bài trong Session -->
-                            <a asp-controller="Cart" asp-action="Index" class="btn btn-primary btn-lg fw-semibold px-3 d-inline-flex align-items-center text-nowrap">
-                                Giỏ hàng (@UltraPokemon.Helpers.CartSession.Count(Context.Session))
+                        <!-- Cụm công cụ bên phải: Quản lý (Admin) + Giỏ hàng + Tài khoản -->
+                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+
+                            <!-- Menu Quản trị (Chỉ hiển thị khi tài khoản có quyền Admin) -->
+                            @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+                            {
+                                <div class="dropdown">
+                                    <button class="btn btn-warning text-dark fw-bold up-action-btn dropdown-toggle"
+                                            type="button" id="adminMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-sliders2 me-1"></i>
+                                        <span>Quản lý</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 mt-2 p-2" aria-labelledby="adminMenu" style="min-width: 220px;">
+                                        <li class="px-2 py-1 text-muted small fw-bold text-uppercase">Hệ thống quản trị</li>
+                                        <li>
+                                            <a class="dropdown-item rounded-2 py-2 fw-semibold text-primary d-flex align-items-center gap-2"
+                                               asp-controller="AdminDashboard" asp-action="Index">
+                                                <i class="bi bi-bar-chart-line"></i> Bảng điều khiển
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li>
+                                            <a class="dropdown-item rounded-2 py-2 fw-semibold d-flex align-items-center gap-2"
+                                               asp-controller="AdminOrders" asp-action="Index">
+                                                <i class="bi bi-receipt"></i> Quản lý Đơn hàng
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item rounded-2 py-2 fw-semibold d-flex align-items-center gap-2"
+                                               asp-controller="AdminAccounts" asp-action="Index">
+                                                <i class="bi bi-people"></i> Quản lý Tài khoản
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            }
+
+                            <!-- Nút Giỏ hàng -->
+                            <a asp-controller="Cart" asp-action="Index"
+                               class="btn btn-outline-dark up-action-btn fw-semibold gap-2 up-cart-btn">
+                                <i class="bi bi-bag"></i>
+                                <span class="d-none d-sm-inline">Giỏ hàng</span>
+                                <span class="badge @(cartCount > 0 ? "bg-danger" : "bg-secondary") rounded-pill">
+                                    @cartCount
+                                </span>
                             </a>
 
-                            <!-- PHÂN QUYỀN HIỂN THỊ THEO TRẠNG THÁI ĐĂNG NHẬP -->
+                            <!-- Khu vực Tài khoản người dùng -->
                             @if (User.Identity != null && User.Identity.IsAuthenticated)
                             {
-                                <!-- NẾU LÀ ADMIN: Hiển thị menu thả xuống (Dropdown) khu vực quản trị -->
-                                @if (User.IsInRole("Admin"))
-                                {
-                                    <div class="dropdown ms-1">
-                                        <a class="dropdown-toggle btn btn-warning text-dark fw-bold px-3 py-2 text-nowrap" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            Quản lý
-                                        </a>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="adminMenu">
-                                            <li>
-                                                <a class="dropdown-item py-2 fw-bold text-primary" asp-controller="AdminDashboard" asp-action="Index">Bảng điều khiển</a>
-                                            </li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <a class="dropdown-item py-2 fw-semibold" asp-controller="AdminAccounts" asp-action="Index">Quản lý Tài khoản</a>
-                                            </li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <a class="dropdown-item py-2 fw-semibold" asp-controller="AdminOrders" asp-action="Index">Quản lý Đơn hàng</a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                }
-
-                                <!-- Lời chào hiển thị Email người dùng đang đăng nhập -->
-                                <span class="fs-6 text-secondary text-nowrap mx-1">Chào, <b>@User.Identity.Name</b></span>
-
-                                <!-- Form Đăng xuất (Bắt buộc dùng phương thức POST kèm AntiForgeryToken để bảo mật) -->
-                                <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-outline-danger btn-lg text-nowrap">Đăng xuất</button>
-                                </form>
+                                <div class="dropdown">
+                                    <button class="btn btn-light border up-action-btn gap-2 dropdown-toggle"
+                                            type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-person-circle text-primary fs-6"></i>
+                                        <span class="fw-semibold text-dark d-none d-lg-inline">@displayName</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 mt-2 p-2" aria-labelledby="userMenu" style="min-width: 235px;">
+                                        <li class="px-3 py-2 border-bottom mb-1">
+                                            <div class="fw-bold text-dark small">@displayName</div>
+                                            <div class="text-muted text-truncate" style="font-size: 0.75rem;">@userEmail</div>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item rounded-2 py-2 d-flex align-items-center gap-2"
+                                               asp-controller="Cart" asp-action="MyOrders">
+                                                <i class="bi bi-box-seam text-primary"></i> Đơn hàng của tôi
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li>
+                                            <!-- Form Đăng xuất bảo mật bằng POST + AntiForgeryToken -->
+                                            <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="dropdown-item rounded-2 py-2 text-danger fw-semibold d-flex align-items-center gap-2">
+                                                    <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
                             }
                             else
                             {
-                                <!-- NẾU CHƯA ĐĂNG NHẬP: Hiển thị nút Đăng nhập và Đăng ký -->
-                                <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary btn-lg fw-semibold px-3 d-inline-flex align-items-center text-nowrap">
+                                <!-- Nút Đăng nhập & Đăng ký căn giữa chuẩn xác 100% -->
+                                <a asp-controller="Account" asp-action="Login"
+                                   class="btn btn-outline-primary up-action-btn fw-semibold">
                                     Đăng nhập
                                 </a>
-                                <a asp-controller="Account" asp-action="Register" class="btn btn-primary btn-lg fw-semibold px-3 d-inline-flex align-items-center text-nowrap">
+                                <a asp-controller="Account" asp-action="Register"
+                                   class="btn btn-primary up-action-btn fw-semibold d-none d-sm-inline-flex">
                                     Đăng ký
                                 </a>
                             }
+
+                            <!-- Nút mở menu trên màn hình điện thoại -->
+                            <button class="navbar-toggler border-0 d-md-none p-1" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Toggle navigation">
+                                <i class="bi bi-list fs-3 text-dark"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TẦNG 3: THANH ĐIỀU HƯỚNG DANH MỤC (SUB-NAVBAR) -->
+            <nav class="navbar navbar-expand-md bg-white border-bottom shadow-sm py-0">
+                <div class="container">
+                    <div class="collapse navbar-collapse" id="mainNav">
+                        <!-- Ô tìm kiếm riêng cho màn hình điện thoại -->
+                        <form class="d-flex d-md-none my-2" asp-controller="Product" asp-action="Index" method="get">
+                            <div class="input-group">
+                                <input class="form-control" type="search" name="searchString"
+                                       value="@currentSearch" placeholder="Tìm thẻ bài..." aria-label="Search">
+                                <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+                            </div>
+                        </form>
+
+                        <!-- Danh sách các liên kết điều hướng chính -->
+                        <ul class="navbar-nav gap-md-2">
+                            <li class="nav-item">
+                                <a class="nav-link up-nav-link @(currentController == "Home" && currentAction == "Index" ? "active" : "")"
+                                   asp-controller="Home" asp-action="Index">
+                                    <i class="bi bi-house-door me-1"></i>Trang chủ
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link up-nav-link @(currentController == "Product" ? "active" : "")"
+                                   asp-controller="Product" asp-action="Index">
+                                    <i class="bi bi-grid-3x3-gap me-1"></i>Pokemon TCG
+                                </a>
+                            </li>
+                            @if (User.Identity != null && User.Identity.IsAuthenticated)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link up-nav-link @(currentController == "Cart" && currentAction == "MyOrders" ? "active" : "")"
+                                       asp-controller="Cart" asp-action="MyOrders">
+                                        <i class="bi bi-clock-history me-1"></i>Đơn hàng của tôi
+                                    </a>
+                                </li>
+                            }
+                            <li class="nav-item">
+                                <a class="nav-link up-nav-link @(currentController == "Home" && currentAction == "About" ? "active" : "")"
+                                   asp-controller="Home" asp-action="About">
+                                    <i class="bi bi-info-circle me-1"></i>Giới thiệu
+                                </a>
+                            </li>
+                        </ul>
+
+                        <!-- Nhãn trạng thái bên góc phải thanh danh mục -->
+                        <div class="ms-auto d-none d-lg-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-light border small text-secondary">
+                            <span class="up-status-dot"></span>
+                            <span>Giao dịch trực tuyến 24/7</span>
                         </div>
                     </div>
                 </div>
             </nav>
         </header>
 
-   
-        <!-- 4. THÂN TRANG CHÍNH & KHU VỰC THÔNG BÁO HỆ THỐNG (TEMPDATA) -->
-       
-        <div class="container">
-            <!-- Banner tiêu đề cửa hàng -->
-            <div class="banner text-center py-3 mb-3">
-                <h2 class="text-primary fw-bold mb-0">ULTRA POKEMON TCG</h2>
-            </div>
-
-            <!-- Hiển thị thông báo thành công / báo lỗi được truyền từ Controller qua TempData -->
+        <!-- ================================================================= -->
+        <!-- 4. THÂN TRANG CHÍNH & KHU VỰC THÔNG BÁO HỆ THỐNG (TEMPDATA)       -->
+        <!-- ================================================================= -->
+        <div class="container pt-3">
             @if (TempData["Success"] is string ok)
             {
-                <div class="alert alert-success py-2">@ok</div>
+                <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 py-2" role="alert">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <div>@ok</div>
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
+                </div>
             }
             @if (TempData["Error"] is string err)
             {
-                <div class="alert alert-danger py-2">@err</div>
+                <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 py-2" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <div>@err</div>
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
+                </div>
             }
 
             <!-- Vị trí nạp nội dung của từng trang con (Views) -->
-            <main role="main" class="pb-3">
+            <main role="main" class="pb-4">
                 @RenderBody()
             </main>
         </div>
 
-        
+        <!-- ================================================================= -->
         <!-- 5. CHÂN TRANG (FOOTER)                                            -->
-      
-        <footer class="footer border-top text-center text-muted py-3 mt-4 bg-light">
-            &copy; 2026 - <strong>Ultra Pokemon Store</strong> Đồ Án 001 (Nhóm 07)
+        <!-- ================================================================= -->
+        <footer class="footer border-top text-center text-muted py-3 mt-4 bg-white">
+            <div class="container small">
+                &copy; 2026 - <strong>Ultra Pokemon Store</strong> • Đồ Án 001 (Nhóm 07)
+            </div>
         </footer>
     </div>
 
-    
-    <!-- 6. THƯ VIỆN JAVASCRIPT & HIỆU ỨNG TƯƠNG TÁC                           -->
-   
+    <!-- ===================================================================== -->
+    <!-- 6. THƯ VIỆN JAVASCRIPT & HIỆU ỨNG ĐỐM SÁNG THEO CHUỘT                 -->
+    <!-- ===================================================================== -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -210,7 +341,123 @@
             });
     </script>
 
-    <!-- Nạp các đoạn Script riêng của từng View con (ví dụ: Chart.js ở trang AdminDashboard) -->
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+<style>
+    /* Đảm bảo Header hiển thị đầy đủ từ sát mép trên cùng */
+    .up-header {
+        z-index: 1030;
+    }
+
+    /* Tầng 1: Dải thông tin dịch vụ trên cùng */
+    .up-topbar {
+        background-color: #0f172a;
+        color: #cbd5e1;
+        font-size: 0.78rem;
+        min-height: 34px;
+    }
+
+    /* Tầng 2: Thanh Header chính */
+    .up-mainbar {
+        padding: 12px 0;
+    }
+
+    .up-brand-title {
+        font-weight: 800;
+        font-size: 1.18rem;
+        letter-spacing: -0.4px;
+        color: #0f172a;
+    }
+
+    .up-brand-sub {
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: #64748b;
+        margin-top: 2px;
+    }
+
+    /* Khung tìm kiếm cao chuẩn 42px */
+    .up-search-form {
+        max-width: 540px;
+    }
+
+    .up-search-box {
+        height: 42px;
+        background-color: #f8fafc;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 10px;
+        overflow: hidden;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+        .up-search-box:focus-within {
+            background-color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .up-search-box .form-control {
+            font-size: 0.92rem;
+            height: 100%;
+        }
+
+    .up-search-btn {
+        height: 100%;
+        border-radius: 0 !important;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    /* Khóa chuẩn chiều cao 42px và căn giữa tuyệt đối cho mọi nút hành động bên phải */
+    .up-action-btn {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 42px !important;
+        padding: 0 16px !important;
+        font-size: 0.9rem !important;
+        line-height: 1 !important;
+        border-radius: 10px !important;
+        white-space: nowrap !important;
+    }
+
+    .up-cart-btn:hover {
+        background-color: #0f172a !important;
+        color: #ffffff !important;
+    }
+
+    /* Tầng 3: Thanh điều hướng danh mục phụ */
+    .up-nav-link {
+        color: #475569 !important;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 11px 14px !important;
+        border-bottom: 3px solid transparent;
+        transition: color 0.15s ease, border-color 0.15s ease;
+    }
+
+        .up-nav-link:hover {
+            color: #2563eb !important;
+        }
+
+        .up-nav-link.active {
+            color: #2563eb !important;
+            border-bottom-color: #2563eb;
+        }
+
+    /* Chấm xanh trạng thái bên góc phải thanh danh mục */
+    .up-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #16a34a;
+        display: inline-block;
+        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+    }
+</style>
