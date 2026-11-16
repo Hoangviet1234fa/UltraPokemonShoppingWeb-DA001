@@ -1,5 +1,4 @@
 -- 1. TẠO CƠ SỞ DỮ LIỆU
--- ============================================================================
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = N'UltraPokemonDB')
 BEGIN
     CREATE DATABASE UltraPokemonDB;
