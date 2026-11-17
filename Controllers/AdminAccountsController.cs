@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UltraPokemon.Data;
@@ -6,131 +7,182 @@ using UltraPokemon.Models;
 
 namespace UltraPokemon.Controllers
 {
-    // YÊU CẦU BẢO MẬT: Chỉ những tài khoản đăng nhập có Role là "Admin" mới được phép truy cập Controller này
     [Authorize(Roles = "Admin")]
     public class AdminAccountsController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
-        public AdminAccountsController(AppDbContext context)
+        public AdminAccountsController(AppDbContext context, IPasswordHasher<User> passwordHasher)
         {
             _context = context;
-        }
-        // 1. CREATE (Hiển thị form thêm tài khoản mới)
-        [HttpGet]
-        public IActionResult Create()
-        {
-            return View();
+            _passwordHasher = passwordHasher;
         }
 
-        // 1. CREATE (Xử lý lưu tài khoản mới vào CSDL và hỗ trợ up ảnh)
+        // 1. DANH SÁCH TÀI KHOẢN (Lọc Role theo kiểu string)
+        public async Task<IActionResult> Index(string? search, string? role)
+        {
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string kw = search.Trim().ToLower();
+                query = query.Where(u => u.FullName.ToLower().Contains(kw) || u.Email.ToLower().Contains(kw));
+            }
+
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                query = query.Where(u => u.Role == role);
+            }
+
+            ViewBag.Search = search;
+            ViewBag.Role = role;
+
+            var users = await query.OrderByDescending(u => u.Id).ToListAsync();
+            return View(users);
+        }
+
+        // 2. DUYỆT TÀI KHOẢN
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(User user, IFormFile? imageFile)
-        {
-            if (ModelState.IsValid)
-            {
-                // 1. Xử lý upload ảnh nếu người dùng có chọn file
-                if (imageFile != null && imageFile.Length > 0)
-                {
-                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
-                    string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images", fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await imageFile.CopyToAsync(stream);
-                    }
-
-                    // Gán đường dẫn ảnh vào thuộc tính của user (tùy thuộc vào tên trường trong Model của bạn)
-                    user.AvatarUrl = "/images/" + fileName;
-                }
-
-                // 2. Thêm vào cơ sở dữ liệu và lưu lại bất đồng bộ
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync(); // Giúp khắc phục cảnh báo CS1998
-
-                // 3. TRẢ VỀ KẾT QUẢ KHI THÀNH CÔNG (Khắc phục lỗi CS0161)
-                return RedirectToAction(nameof(Index));
-            }
-
-            // 4. TRẢ VỀ KẾT QUẢ KHI DỮ LIỆU KHÔNG HỢP LỆ (Bắt buộc phải có để phủ kín các nhánh logic)
-            return View(user);
-        }        
-        // 1. READ: XEM DANH SÁCH TÀI KHOẢN (INDEX)
-        public async Task<IActionResult> Index()
-        {
-            // Truy vấn lấy toàn bộ danh sách User từ cơ sở dữ liệu
-            var accounts = await _context.Users.ToListAsync();
-            return View(accounts);
-        }
-
-        
-        // 2. UPDATE: CHỈNH SỬA THÔNG TIN TÀI KHOẢN
-       
-        // GET: Hiển thị form chỉnh sửa
-        [HttpGet]
-        public async Task<IActionResult> Edit(int id)
-        {
-            // Dùng hàm FindAsync để tìm tài khoản dựa trên ID
-            var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound(); // Báo lỗi 404 nếu không tìm thấy ID tài khoản
-
-            return View(user);
-        }
-
-        // POST: Xử lý dữ liệu form và lưu vào CSDL
-        [HttpPost]
-        [ValidateAntiForgeryToken] // Chống tấn công giả mạo yêu cầu chéo trang (CSRF)
-        public async Task<IActionResult> Edit(int id, User user)
-        {
-            // Đảm bảo ID trên URL khớp với ID của form gửi lên
-            if (id != user.Id) return NotFound();
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(user); // Đánh dấu đối tượng cần cập nhật
-                    await _context.SaveChangesAsync(); // Lưu thay đổi vào CSDL
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    // Xử lý lỗi trong trường hợp tài khoản vừa bị ai đó xóa mất trước khi ta kịp lưu
-                    if (!_context.Users.Any(e => e.Id == user.Id)) return NotFound();
-                    else throw;
-                }
-                return RedirectToAction(nameof(Index)); // Chuyển hướng về trang danh sách
-            }
-            return View(user); // Trả lại form báo lỗi nếu Validation không hợp lệ
-        }
-
-       
-        // 3. DELETE: XÓA TÀI KHOẢN (DELETE)
-        
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var user = await _context.Users.FindAsync(id);
-            if (user != null)
-            {
-                // Thực thi lệnh xóa tài khoản ra khỏi DbSet
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync(); // Cập nhật CSDL
-            }
-            return RedirectToAction(nameof(Index)); // Quay về trang danh sách
-        }
-        // Hành động duyệt tài khoản
-        [HttpPost]
         public async Task<IActionResult> Approve(int id)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user != null)
+            if (user == null) return NotFound();
+
+            user.IsApproved = true;
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Đã phê duyệt tài khoản {user.Email}!";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // 3. KHÓA / MỞ KHÓA TÀI KHOẢN
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleLock(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            if (user.Email == User.Identity?.Name)
             {
-                user.IsApproved = true; // Chuyển thành đã duyệt
-                _context.Update(user);
-                await _context.SaveChangesAsync();
+                TempData["Error"] = "Không thể tự khóa tài khoản Admin đang đăng nhập!";
+                return RedirectToAction(nameof(Index));
             }
+
+            user.IsApproved = !user.IsApproved;
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = user.IsApproved
+                ? $"Đã mở khóa tài khoản {user.Email}."
+                : $"Đã khóa tài khoản {user.Email}.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // 4. TẠO TÀI KHOẢN MỚI
+        public IActionResult Create()
+        {
+            return View(new User { IsApproved = true, Role = "Staff" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(User user, string rawPassword)
+        {
+            ModelState.Remove("PasswordHash");
+
+            if (string.IsNullOrWhiteSpace(rawPassword) || rawPassword.Length < 6)
+            {
+                ModelState.AddModelError("rawPassword", "Mật khẩu phải có ít nhất 6 ký tự.");
+            }
+
+            if (await _context.Users.AnyAsync(u => u.Email == user.Email))
+            {
+                ModelState.AddModelError("Email", "Email này đã tồn tại trong hệ thống.");
+            }
+
+            if (ModelState.IsValid)
+            {
+                user.PasswordHash = _passwordHasher.HashPassword(user, rawPassword);
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                TempData["Success"] = $"Đã tạo tài khoản {user.Email} thành công!";
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(user);
+        }
+
+        // 5. CHỈNH SỬA TÀI KHOẢN
+        public async Task<IActionResult> Edit(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            return View(user);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, User model, string? newPassword)
+        {
+            if (id != model.Id) return NotFound();
+
+            ModelState.Remove("PasswordHash");
+
+            var existingUser = await _context.Users.FindAsync(id);
+            if (existingUser == null) return NotFound();
+
+            if (await _context.Users.AnyAsync(u => u.Email == model.Email && u.Id != id))
+            {
+                ModelState.AddModelError("Email", "Email này đã được sử dụng bởi tài khoản khác.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(newPassword) && newPassword.Length < 6)
+            {
+                ModelState.AddModelError("newPassword", "Mật khẩu mới phải có ít nhất 6 ký tự.");
+            }
+
+            if (ModelState.IsValid)
+            {
+                existingUser.FullName = model.FullName;
+                existingUser.Email = model.Email;
+                existingUser.Role = model.Role;
+                existingUser.IsApproved = model.IsApproved;
+
+                if (!string.IsNullOrWhiteSpace(newPassword))
+                {
+                    existingUser.PasswordHash = _passwordHasher.HashPassword(existingUser, newPassword);
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["Success"] = $"Đã cập nhật tài khoản {existingUser.Email}!";
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(model);
+        }
+
+        // 6. XÓA TÀI KHOẢN
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            if (user.Email == User.Identity?.Name)
+            {
+                TempData["Error"] = "Không thể xóa chính tài khoản Admin đang đăng nhập!";
+                return RedirectToAction(nameof(Index));
+            }
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Đã xóa tài khoản {user.Email}.";
             return RedirectToAction(nameof(Index));
         }
     }

@@ -11,7 +11,7 @@
     // Lấy danh sách các thẻ bài liên quan từ ViewBag, nếu không có thì gán danh sách rỗng để tránh lỗi Null
     var related = ViewBag.Related as List<Product> ?? new List<Product>();
 
-    // Gọi Helper để lấy màu sắc Bootstrap tương ứng với Hệ (Ví dụ: Fire -> danger (đỏ), Water -> info (xanh dương))
+    // Gọi Helper để lấy màu sắc Bootstrap tương ứng với Hệ (Ví dụ: Fire -> danger (đỏ), Water -> primary (xanh dương))
     var color = ElementHelper.Color(Model.ElementType);
 
     // Tính toán phần trăm thanh sức mạnh (Power) tối đa là 200 để làm thanh Progress Bar
@@ -19,27 +19,30 @@
 }
 
 <div class="container mt-4">
-    <!-- Nút quay lại trang trước -->
+    <!-- Nút quay lại trang danh sách sản phẩm -->
     <a asp-action="Index" class="btn btn-secondary mb-3">&larr; Quay lại danh sách</a>
 
-    <div class="row">
+    <div class="row bg-white rounded-4 shadow-sm p-4">
+    
+        <!-- CỘT TRÁI: HIỂN THỊ HÌNH ẢNH SẢN PHẨM  -->
        
-        <!-- CỘT TRÁI: HIỂN THỊ HÌNH ẢNH SẢN PHẨM      -->
-        
         <div class="col-md-5 text-center">
             <div class="detail-card-wrap card-sparkle d-inline-block rounded">
-                <!-- Xử lý ảnh: ImageHelper tạo đường dẫn chuẩn. onerror giúp tự động tải ảnh mặc định (fallback) nếu file ảnh bị lỗi hoặc mất -->
+                <!-- Xử lý ảnh: ImageHelper tạo đường dẫn chuẩn. Sự kiện onerror giúp tự động tải ảnh mặc định (fallback) nếu file ảnh bị lỗi hoặc mất -->
                 <img src="@ImageHelper.Resolve(Env, Model)"
-                     onerror="this.onerror=null;this.src=this.dataset.fallback;" data-fallback="@ImageHelper.Placeholder(Model)"
-                     alt="@Model.Name" class="img-fluid rounded shadow" style="max-height: 480px;" />
+                     onerror="this.onerror=null;this.src=this.dataset.fallback;"
+                     data-fallback="@ImageHelper.Placeholder(Model)"
+                     alt="@Model.Name"
+                     class="img-fluid rounded shadow"
+                     style="max-height: 480px;" />
             </div>
         </div>
 
+      
+        <!-- CỘT PHẢI: HIỂN THỊ THÔNG TIN & CHỨC NĂNG     -->
        
-        <!-- CỘT PHẢI: HIỂN THỊ THÔNG TIN & CHỨC NĂNG   -->
-        
         <div class="col-md-7">
-            <h2>@Model.Name</h2>
+            <h2 class="fw-bold">@Model.Name</h2>
             <hr />
             <!-- Hiển thị giá tiền định dạng có dấu phẩy phân cách hàng nghìn (N0) -->
             <h3 class="text-danger fw-bold mb-3">Giá: @Model.Price.ToString("N0") VNĐ</h3>
@@ -47,37 +50,61 @@
             <ul class="list-group list-group-flush mb-4">
                 <li class="list-group-item">
                     <strong>Hệ:</strong>
-                    <!-- Màu nền badge thay đổi linh hoạt theo biến 'color' đã tính ở trên -->
+                    <!-- Màu nền badge thay đổi linh hoạt theo biến 'color' đã tính ở trên (nếu nền vàng warning thì đổi chữ sang màu tối text-dark cho dễ đọc) -->
                     <span class="badge bg-@color @(color == "warning" ? "text-dark" : "")">@Model.ElementType</span>
                 </li>
+
+                <li class="list-group-item">
+                    <strong>Tồn kho:</strong>
+                    <!-- Kiểm tra số lượng tồn kho (Stock): nếu > 0 thì báo số lượng còn lại, ngược lại báo Hết hàng -->
+                    @if (Model.Stock > 0)
+                    {
+                        <span class="badge bg-success">Còn @Model.Stock lá</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">Hết hàng</span>
+                    }
+                </li>
+
                 <li class="list-group-item">
                     <strong>Chỉ số sức mạnh (Power):</strong> <span class="badge bg-danger">⚡ @Model.Power HP / ATK</span>
                     <div class="progress mt-2" style="height: 10px;">
-                        <!-- Độ dài của thanh progress-bar được điều chỉnh bằng biến powerPct -->
+                        <!-- Độ dài của thanh progress-bar được điều chỉnh tự động bằng biến powerPct -->
                         <div class="progress-bar bg-@color" role="progressbar" style="width: @(powerPct)%"></div>
                     </div>
                 </li>
             </ul>
 
             <div>
-                <h5>Mô tả lá bài:</h5>
+                <h5 class="fw-bold">Mô tả lá bài:</h5>
                 <p>@Model.Description</p>
             </div>
 
             <!-- Gom nhóm các nút bấm hành động (Action Buttons) -->
             <div class="d-flex align-items-center mt-3">
 
-                <!-- 1. FORM THÊM GIỎ HÀNG: Gửi POST Request chứa ID sản phẩm lên CartController -->
-                <form asp-controller="Cart" asp-action="Add" method="post" class="d-inline">
-                    <!-- Các input type="hidden" dùng để truyền ngầm dữ liệu lên server mà không hiện ra cho người dùng thấy -->
-                    <input type="hidden" name="id" value="@Model.Id" />
-                    <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
-                    <button type="submit" class="btn btn-success btn-lg">Thêm vào giỏ hàng</button>
-                </form>
+                <!-- 1. FORM THÊM GIỎ HÀNG: Chỉ cho phép bấm thêm vào giỏ khi số lượng tồn kho > 0 -->
+                @if (Model.Stock > 0)
+                {
+                    <form asp-controller="Cart" asp-action="Add" method="post" class="d-inline">
+                        <!-- Tạo mã Token chống tấn công giả mạo yêu cầu (CSRF) khớp với [ValidateAntiForgeryToken] ở CartController -->
+                        @Html.AntiForgeryToken()
+                        <!-- Các input type="hidden" dùng để truyền ngầm ID sản phẩm và đường dẫn trang hiện tại lên server -->
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+                        <button type="submit" class="btn btn-success btn-lg">Thêm vào giỏ hàng</button>
+                    </form>
+                }
+                else
+                {
+                    <!-- Nếu hết hàng (Stock <= 0) thì vô hiệu hóa nút bấm để ngăn khách đặt vượt tồn kho -->
+                    <button type="button" class="btn btn-secondary btn-lg" disabled>Hết hàng</button>
+                }
 
                 <!-- 2. NÚT SỬA SẢN PHẨM (CHỈ DÀNH CHO ADMIN) -->
-                <!-- LOGIC BẢO MẬT: Kiểm tra xem User đã đăng nhập chưa VÀ có nằm trong quyền "Admin" không.
-                     Nếu đúng Admin thì mới render HTML của nút bấm này ra màn hình. -->
+                <!-- LOGIC PHÂN QUYỀN: Kiểm tra xem User đã đăng nhập chưa VÀ có nằm trong quyền "Admin" không.
+                     Nếu đúng Admin thì mới hiển thị nút bấm Sửa ra màn hình. -->
                 @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin"))
                 {
                     <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-lg ms-3">Sửa</a>
@@ -86,19 +113,19 @@
         </div>
     </div>
 
+  
+    <!-- PHẦN DƯỚI: SẢN PHẨM LIÊN QUAN (CÙNG HỆ)  -->
    
-    <!-- PHẦN DƯỚI: SẢN PHẨM LIÊN QUAN (CÙNG HỆ)    -->
-    
-    <!-- Dùng lệnh Any() để kiểm tra nếu danh sách có ít nhất 1 sản phẩm thì mới hiện khu vực này -->
+    <!-- Dùng lệnh Any() để kiểm tra nếu danh sách có ít nhất 1 sản phẩm thì mới hiển thị khu vực này -->
     @if (related.Any())
     {
-        <h4 class="mt-5">Thẻ cùng hệ @Model.ElementType</h4>
+        <h4 class="mt-5 fw-bold">Thẻ cùng hệ @Model.ElementType</h4>
         <div class="row mt-3">
             <!-- Vòng lặp foreach duyệt qua từng sản phẩm liên quan -->
             @foreach (var r in related)
             {
                 <div class="col-6 col-md-3 mb-4">
-                    <!-- Gọi Partial View (View thành phần) '_ProductCard' để tái sử dụng lại code hiển thị 1 thẻ bài, truyền model 'r' vào -->
+                    <!-- Gọi Partial View (View thành phần) '_ProductCard' để tái sử dụng giao diện 1 thẻ bài, truyền model 'r' vào -->
                     <partial name="_ProductCard" model="r" />
                 </div>
             }

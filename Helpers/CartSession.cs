@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace UltraPokemon.Helpers;
 
-/// <summary>Giỏ hàng lưu trong Session: productId -> số lượng.</summary>
+/// <summary>Quản lý giỏ hàng lưu trong Session: Dictionary(productId -> số lượng).</summary>
 public static class CartSession
 {
     private const string Key = "CART";

@@ -1,251 +1,275 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using UltraPokemon.Data;
-using UltraPokemon.Helpers;
 using UltraPokemon.Models;
 
-namespace UltraPokemon.Controllers;
-
-public class ProductController : Controller
+namespace UltraPokemon.Controllers
 {
-    private static readonly string[] AllowedExt = { ".png", ".jpg", ".jpeg", ".webp", ".gif" };
-    private const long MaxImageBytes = 5 * 1024 * 1024;
-
-    private readonly AppDbContext _db;
-    private readonly IWebHostEnvironment _env;
-
-    public ProductController(AppDbContext db, IWebHostEnvironment env)
+    public class ProductController : Controller
     {
-        _db = db;
-        _env = env;
-    }
+        private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
- 
-    // INDEX: Mở công khai cho mọi người xem danh sách, tìm kiếm, lọc
- 
-    public async Task<IActionResult> Index(string? searchString, string? elementType, string? sortOrder)
-    {
-        // Danh sách hệ chuẩn lấy từ bảng Categories (dùng cho các nút lọc)
-        var elements = await _db.   Categories.AsNoTracking()
-            .OrderBy(c => c.Id).Select(c => c.Name).ToListAsync();
-
-        // Đưa giá trị "elementType" trên URL về đúng tên hệ trong bảng Categories
-        string? element = null;
-        if (!string.IsNullOrWhiteSpace(elementType))
+        public ProductController(AppDbContext context, IWebHostEnvironment webHostEnvironment)
         {
-            var key = TextHelper.Normalize(elementType);
-            element = elements.FirstOrDefault(e => TextHelper.Normalize(e) == key) ?? elementType.Trim();
+            _context = context;
+            _webHostEnvironment = webHostEnvironment;
         }
 
-        // 1) Lọc theo Hệ ngay trong câu SQL (LINQ -> WHERE ElementType = ...)
-        IQueryable<Product> query = _db.Products.AsNoTracking();
-        if (element != null)
-            query = query.Where(p => p.ElementType == element);
-
-        var products = await query.ToListAsync();
-
-        // 2) Tìm theo TÊN thẻ. SQLite phân biệt hoa/thường và dấu khi dùng Contains(),
-        //    nên so khớp bằng TextHelper.Normalize để "charizard", "CHARIZARD" đều ra "Charizard".
-        string? note = null;
-        var keyword = TextHelper.Normalize(searchString);
-        var ranked = false;
-
-        if (keyword.Length > 0)
+      
+        // 1. DANH SÁCH THẺ BÀI (TÌM KIẾM + LỌC + SẮP XẾP + PHÂN TRANG)
+       
+        //  Thêm tham số int page = 1 để kích hoạt thanh phân trang trên View
+        public async Task<IActionResult> Index(string? search, string? element, decimal? minPrice, decimal? maxPrice, string? sortOrder, int page = 1)
         {
-            var words = keyword.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var query = _context.Products.AsQueryable();
 
-            var byName = products
-                .Where(p => { var n = TextHelper.Normalize(p.Name); return words.All(w => n.Contains(w)); })
-                .ToList();
+            // 1. Tìm kiếm theo tên thẻ hoặc mô tả
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string keyword = search.Trim().ToLower();
+                query = query.Where(p => p.Name.ToLower().Contains(keyword)
+                                      || (p.Description != null && p.Description.ToLower().Contains(keyword)));
+            }
 
-            if (byName.Count > 0)
+            // 2. Lọc theo Hệ (ElementType)
+            if (!string.IsNullOrWhiteSpace(element))
             {
-                products = byName;
-                ranked = true;
+                query = query.Where(p => p.ElementType == element);
             }
-            else
+
+            // 3. Lọc theo khoảng giá
+            if (minPrice.HasValue)
             {
-                // Không có thẻ nào trùng tên: nếu khách gõ tên hệ (vd "lửa") thì gợi ý các thẻ thuộc hệ đó
-                var byElement = products
-                    .Where(p => { var e = TextHelper.Normalize(p.ElementType); return words.All(w => e.Contains(w)); })
-                    .ToList();
-                if (byElement.Count > 0)
-                {
-                    products = byElement;
-                    note = $"Không có thẻ nào tên \"{searchString!.Trim()}\" - hiển thị các thẻ thuộc hệ phù hợp.";
-                }
-                else
-                {
-                    products = new List<Product>();
-                }
+                query = query.Where(p => p.Price >= minPrice.Value);
             }
+            if (maxPrice.HasValue)
+            {
+                query = query.Where(p => p.Price <= maxPrice.Value);
+            }
+
+            // 4. Sắp xếp
+            query = sortOrder switch
+            {
+                "price_asc" => query.OrderBy(p => p.Price),
+                "price_desc" => query.OrderByDescending(p => p.Price),
+                "power_desc" => query.OrderByDescending(p => p.Power),
+                "name_asc" => query.OrderBy(p => p.Name),
+                _ => query.OrderByDescending(p => p.Id) // Mặc định thẻ mới nhất lên đầu
+            };
+
+            // 5. Phân trang với LINQ Skip / Take
+            int pageSize = 8;
+            if (page < 1) page = 1;
+            int totalItems = await query.CountAsync();
+            int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            if (totalPages > 0 && page > totalPages) page = totalPages;
+
+            var products = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            // Truyền lại các tham số để giữ trạng thái trên thanh lọc & phân trang
+            ViewBag.Search = search;
+            ViewBag.Element = element;
+            ViewBag.MinPrice = minPrice;
+            ViewBag.MaxPrice = maxPrice;
+            ViewBag.SortOrder = sortOrder;
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.TotalItems = totalItems;
+
+            // Lấy danh sách các hệ hiện có từ bảng Categories (fallback sang Distinct từ Products nếu Categories trống)
+            var categories = await _context.Categories.Select(c => c.Name).ToListAsync();
+            if (!categories.Any())
+            {
+                categories = await _context.Products
+                    .Select(p => p.ElementType)
+                    .Distinct()
+                    .OrderBy(e => e)
+                    .ToListAsync();
+            }
+            ViewBag.Elements = categories;
+
+            return View(products);
         }
 
-        // 3) Sắp xếp. Khi tìm theo tên và chưa chọn sắp xếp: khớp chính xác -> bắt đầu bằng -> còn lại
-        products = sortOrder switch
+      
+        // 2. CHI TIẾT THẺ BÀI
+       
+        public async Task<IActionResult> Details(int? id)
         {
-            "price_asc" => products.OrderBy(p => p.Price).ToList(),
-            "price_desc" => products.OrderByDescending(p => p.Price).ToList(),
-            "power_desc" => products.OrderByDescending(p => p.Power).ToList(),
-            "name_desc" => products.OrderByDescending(p => p.Name).ToList(),
-            _ when ranked => products
-                .OrderBy(p => { var n = TextHelper.Normalize(p.Name); return n == keyword ? 0 : n.StartsWith(keyword) ? 1 : 2; })
-                .ThenBy(p => p.Name).ToList(),
-            _ => products.OrderBy(p => p.Name).ToList()
-        };
+            if (id == null) return NotFound();
 
-        ViewBag.CurrentFilter = searchString;
-        ViewBag.CurrentElement = element;
-        ViewBag.CurrentSort = sortOrder;
-        ViewBag.Elements = elements;
-        ViewBag.SearchNote = note;
+            var product = await _context.Products
+                .FirstOrDefaultAsync(m => m.Id == id);
 
-        return View(products);
-    }
+            if (product == null) return NotFound();
 
-    // Trang chi tiết: Mở công khai cho mọi người xem thông tin thẻ bài
-    public async Task<IActionResult> Details(int? id)
-    {
-        if (id == null) return BadRequest();
-        var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
-        if (product == null) return NotFound();
+            // Lấy thêm tối đa 4 thẻ bài cùng hệ để gợi ý bên dưới
+            var relatedProducts = await _context.Products
+                .Where(p => p.ElementType == product.ElementType && p.Id != product.Id)
+                .Take(4)
+                .ToListAsync();
 
-        // Gợi ý các thẻ cùng hệ
-        ViewBag.Related = await _db.Products.AsNoTracking()
-            .Where(p => p.ElementType == product.ElementType && p.Id != product.Id)
-            .OrderByDescending(p => p.Power)
-            .Take(4)
-            .ToListAsync();
+            ViewBag.RelatedProducts = relatedProducts;
 
-        return View(product);
-    }
-
-    // ---------- Create (CHỈ ADMIN MỚI ĐƯỢC PHÉP TRUY CẬP) ----------
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Create()
-    {
-        await LoadElements();
-        return View(new Product());
-    }
-
-    [Authorize(Roles = "Admin")]
-    [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Name,ElementType,Power,Price,Description")] Product product, IFormFile? imageFile)
-    {
-        ModelState.Remove(nameof(Product.ImageUrl));
-        ModelState.Remove(nameof(Product.Description));
-        product.Description ??= string.Empty;
-
-        if (string.IsNullOrWhiteSpace(product.Name))
-            ModelState.AddModelError(nameof(Product.Name), "Tên thẻ bài không được để trống!");
-
-        var upload = await SaveImage(imageFile);
-        if (upload.Error != null) ModelState.AddModelError("imageFile", upload.Error);
-
-        if (!ModelState.IsValid)
-        {
-            await LoadElements();
             return View(product);
         }
 
-        product.ImageUrl = upload.Url ?? string.Empty;
-        _db.Add(product);
-        await _db.SaveChangesAsync();
-        TempData["Success"] = $"Đã thêm thẻ \"{product.Name}\".";
-        return RedirectToAction(nameof(Index));
-    }
-
-    // ---------- Edit (CHỈ ADMIN MỚI ĐƯỢC PHÉP TRUY CẬP) ----------
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Edit(int? id)
-    {
-        if (id == null) return NotFound();
-        var product = await _db.Products.FindAsync(id);
-        if (product == null) return NotFound();
-        await LoadElements();
-        return View(product);
-    }
-
-    [Authorize(Roles = "Admin")]
-    [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,Name,ElementType,Power,Price,Description")] Product input, IFormFile? imageFile)
-    {
-        if (id != input.Id) return NotFound();
-        var product = await _db.Products.FindAsync(id);
-        if (product == null) return NotFound();
-
-        ModelState.Remove(nameof(Product.ImageUrl));
-        ModelState.Remove(nameof(Product.Description));
-
-        if (string.IsNullOrWhiteSpace(input.Name))
-            ModelState.AddModelError(nameof(Product.Name), "Tên thẻ bài không được để trống!");
-
-        var upload = await SaveImage(imageFile);
-        if (upload.Error != null) ModelState.AddModelError("imageFile", upload.Error);
-
-        if (!ModelState.IsValid)
+        // ==========================================
+        // 3. THÊM THẺ BÀI MỚI (CHỈ ADMIN & STAFF)
+        // ==========================================
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> Create()
         {
-            input.ImageUrl = product.ImageUrl;
-            await LoadElements();
-            return View(input);
+            ViewBag.Categories = await _context.Categories.ToListAsync();
+            return View();
         }
 
-        product.Name = input.Name;
-        product.ElementType = input.ElementType;
-        product.Power = input.Power;
-        product.Price = input.Price;
-        product.Description = input.Description ?? string.Empty;
-        if (upload.Url != null) product.ImageUrl = upload.Url;
-
-        await _db.SaveChangesAsync();
-        TempData["Success"] = $"Đã cập nhật thẻ \"{product.Name}\".";
-        return RedirectToAction(nameof(Index));
-    }
-
-    // ---------- Delete (CHỈ ADMIN MỚI ĐƯỢC PHÉP TRUY CẬP) ----------
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Delete(int? id)
-    {
-        if (id == null) return NotFound();
-        var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
-        return product == null ? NotFound() : View(product);
-    }
-
-    [Authorize(Roles = "Admin")]
-    [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id)
-    {
-        var product = await _db.Products.FindAsync(id);
-        if (product != null)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Staff")]
+        // SỬA LỖI: Bổ sung "Stock" vào [Bind] để lưu được số lượng tồn kho khi tạo mới
+        public async Task<IActionResult> Create([Bind("Name,ElementType,Power,Price,Stock,Description")] Product product, IFormFile? imageFile, string? imageUrlInput)
         {
-            _db.Products.Remove(product);
-            await _db.SaveChangesAsync();
-            TempData["Success"] = $"Đã xóa thẻ \"{product.Name}\".";
+            if (ModelState.IsValid)
+            {
+                // Ưu tiên lưu file ảnh upload từ máy tính
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    product.ImageUrl = await SaveImageAsync(imageFile);
+                }
+                // Nếu không upload file thì lấy link URL người dùng dán vào
+                else if (!string.IsNullOrWhiteSpace(imageUrlInput))
+                {
+                    product.ImageUrl = imageUrlInput.Trim();
+                }
+
+                _context.Add(product);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = $"Đã thêm thẻ bài '{product.Name}' thành công!";
+                return RedirectToAction(nameof(Index));
+            }
+
+            ViewBag.Categories = await _context.Categories.ToListAsync();
+            return View(product);
         }
-        return RedirectToAction(nameof(Index));
-    }
 
-    // ---------- helpers ----------
-    private async Task LoadElements() =>
-        ViewBag.ElementList = new SelectList(
-            await _db.Categories.AsNoTracking().OrderBy(c => c.Id).Select(c => c.Name).ToListAsync());
+    
+        // 4. CHỈNH SỬA THẺ BÀI (CHỈ ADMIN & STAFF)
+      
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> Edit(int? id)
+        {
+            if (id == null) return NotFound();
 
-    private async Task<(string? Url, string? Error)> SaveImage(IFormFile? file)
-    {
-        if (file == null || file.Length == 0) return (null, null);
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
 
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!AllowedExt.Contains(ext)) return (null, "Chỉ hỗ trợ ảnh .png, .jpg, .jpeg, .webp, .gif");
-        if (file.Length > MaxImageBytes) return (null, "Ảnh tối đa 5 MB");
+            ViewBag.Categories = await _context.Categories.ToListAsync();
+            return View(product);
+        }
 
-        var dir = Path.Combine(_env.WebRootPath, "images");
-        Directory.CreateDirectory(dir);
-        var name = $"{Guid.NewGuid():N}{ext}";
-        await using (var fs = new FileStream(Path.Combine(dir, name), FileMode.Create))
-            await file.CopyToAsync(fs);
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Staff")]
+        // SỬA LỖI: Bổ sung "Stock" vào [Bind] để cập nhật được số lượng tồn kho khi chỉnh sửa
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,ElementType,Power,Price,Stock,ImageUrl,Description")] Product product, IFormFile? imageFile, string? imageUrlInput)
+        {
+            if (id != product.Id) return NotFound();
 
-        return ($"/images/{name}", null);
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    // Nếu người dùng upload ảnh mới -> lưu file mới
+                    if (imageFile != null && imageFile.Length > 0)
+                    {
+                        product.ImageUrl = await SaveImageAsync(imageFile);
+                    }
+                    // Hoặc nếu người dùng nhập URL mới
+                    else if (!string.IsNullOrWhiteSpace(imageUrlInput))
+                    {
+                        product.ImageUrl = imageUrlInput.Trim();
+                    }
+
+                    _context.Update(product);
+                    await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = $"Đã cập nhật thẻ bài '{product.Name}'!";
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!ProductExists(product.Id)) return NotFound();
+                    else throw;
+                }
+                return RedirectToAction(nameof(Index));
+            }
+
+            ViewBag.Categories = await _context.Categories.ToListAsync();
+            return View(product);
+        }
+
+        
+        // 5. XÓA THẺ BÀI (CHỈ ADMIN)
+        
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (product == null) return NotFound();
+
+            return View(product);
+        }
+
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product != null)
+            {
+                _context.Products.Remove(product);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Đã xóa thẻ bài '{product.Name}' khỏi kho!";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // HÀM HỖ TRỢ LƯU FILE ẢNH VÀO WWWROOT/IMAGES/CARDS
+    
+        private async Task<string> SaveImageAsync(IFormFile imageFile)
+        {
+            string uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "cards");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            string uniqueFileName = Guid.NewGuid().ToString("N") + Path.GetExtension(imageFile.FileName);
+            string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await imageFile.CopyToAsync(fileStream);
+            }
+
+            return "/images/cards/" + uniqueFileName;
+        }
+
+        private bool ProductExists(int id)
+        {
+            return _context.Products.Any(e => e.Id == id);
+        }
     }
 }

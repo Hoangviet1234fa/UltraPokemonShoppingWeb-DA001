@@ -12,11 +12,9 @@ public class CartController : Controller
     private readonly AppDbContext _db;
     public CartController(AppDbContext db) => _db = db;
 
-  
-    // 1. QUẢN LÝ GIỎ HÀNG (INDEX, ADD, REMOVE, CLEAR)
-  
+   
+    // 1. QUẢN LÝ GIỎ HÀNG (XEM, THÊM, CẬP NHẬT SỐ LƯỢNG, XÓA, LÀM RỖNG)
 
-    // GET: Hiển thị danh sách thẻ bài hiện có trong Session giỏ hàng
     public async Task<IActionResult> Index()
     {
         var cart = CartSession.Get(HttpContext.Session);
@@ -31,7 +29,6 @@ public class CartController : Controller
         return View(lines);
     }
 
-    // POST: Thêm 1 thẻ bài vào giỏ hàng (Kiểm tra tồn kho lớp 1)
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(int id, string? returnUrl)
     {
@@ -41,6 +38,7 @@ public class CartController : Controller
         var cart = CartSession.Get(HttpContext.Session);
         cart.TryGetValue(id, out var qty);
 
+        // Kiểm tra tồn kho trước khi cho phép thêm vào giỏ
         if (qty + 1 > product.Stock)
         {
             TempData["Error"] = $"Không thể thêm. Cửa hàng chỉ còn {product.Stock} lá \"{product.Name}\".";
@@ -57,7 +55,33 @@ public class CartController : Controller
         return RedirectToAction("Index", "Product");
     }
 
-    // POST: Xóa 1 dòng sản phẩm khỏi giỏ hàng
+    // Cập nhật số lượng trực tiếp trong giỏ hàng
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateQuantity(int id, int quantity)
+    {
+        var product = await _db.Products.FindAsync(id);
+        if (product == null) return NotFound();
+
+        var cart = CartSession.Get(HttpContext.Session);
+
+        if (quantity <= 0)
+        {
+            cart.Remove(id);
+            TempData["Success"] = $"Đã xóa \"{product.Name}\" khỏi giỏ hàng.";
+        }
+        else if (quantity > product.Stock)
+        {
+            TempData["Error"] = $"Không đủ hàng! Kho chỉ còn {product.Stock} lá \"{product.Name}\".";
+        }
+        else
+        {
+            cart[id] = quantity;
+        }
+
+        CartSession.Save(HttpContext.Session, cart);
+        return RedirectToAction(nameof(Index));
+    }
+
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Remove(int id)
     {
@@ -67,7 +91,6 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // POST: Làm trống toàn bộ giỏ hàng
     [HttpPost, ValidateAntiForgeryToken]
     public IActionResult Clear()
     {
@@ -75,10 +98,9 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // 2. TRANG THANH TOÁN (CHECKOUT) & XỬ LÝ TẠO ĐƠN HÀNG (TRANSACTION)
-  
-
-    // GET: Mở trang Checkout
+    
+    // 2. THANH TOÁN (CHECKOUT) & TẠO ĐƠN HÀNG (TRANSACTION)
+    
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> Checkout()
@@ -90,11 +112,11 @@ public class CartController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        // Nạp danh sách sản phẩm và tổng tiền vào ViewBag cho Checkout.cshtml
         await LoadCartSummaryToViewBag(cart);
         return View(new CheckoutViewModel());
     }
 
-    // POST: Nhận dữ liệu từ form Checkout.cshtml (/Cart/Checkout)
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize]
     public async Task<IActionResult> Checkout(CheckoutViewModel model)
@@ -102,7 +124,6 @@ public class CartController : Controller
         return await ExecuteCheckoutAsync(model);
     }
 
-    // POST: Giữ lại action ProcessCheckout để tương thích nếu có View cũ gọi tới
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize]
     public async Task<IActionResult> ProcessCheckout(CheckoutViewModel model)
@@ -110,7 +131,6 @@ public class CartController : Controller
         return await ExecuteCheckoutAsync(model);
     }
 
-    // Hàm xử lý lõi: Kiểm tra tồn kho, lưu Order + OrderDetails, trừ kho & điều hướng cổng thanh toán
     private async Task<IActionResult> ExecuteCheckoutAsync(CheckoutViewModel model)
     {
         var cart = CartSession.Get(HttpContext.Session);
@@ -120,7 +140,6 @@ public class CartController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        // Nếu dữ liệu form chưa hợp lệ -> nạp lại thông tin giỏ hàng và báo lỗi tại chỗ
         if (!ModelState.IsValid)
         {
             await LoadCartSummaryToViewBag(cart);
@@ -128,10 +147,9 @@ public class CartController : Controller
         }
 
         var ids = cart.Keys.ToList();
-        // Không dùng AsNoTracking() vì cần EF Core theo dõi để cập nhật trừ Stock
         var products = await _db.Products.Where(p => ids.Contains(p.Id)).ToListAsync();
 
-        // Kiểm tra tồn kho lớp 2 trước khi ghi xuống Database
+        // Kiểm tra tồn kho thực tế trước khi tạo hóa đơn
         foreach (var p in products)
         {
             if (cart[p.Id] > p.Stock)
@@ -141,7 +159,7 @@ public class CartController : Controller
             }
         }
 
-        // Mở Transaction để đảm bảo tạo đơn hàng và trừ tồn kho luôn đồng bộ
+        // Bọc trong Transaction để đảm bảo tạo Order, OrderDetail và trừ kho đồng bộ
         using var transaction = await _db.Database.BeginTransactionAsync();
         try
         {
@@ -158,7 +176,7 @@ public class CartController : Controller
             };
 
             _db.Orders.Add(order);
-            await _db.SaveChangesAsync(); // Lưu lần 1 để sinh order.Id tự tăng
+            await _db.SaveChangesAsync();
 
             foreach (var p in products)
             {
@@ -172,6 +190,7 @@ public class CartController : Controller
                     UnitPrice = Convert.ToDecimal(p.Price)
                 });
 
+                // Trừ tồn kho tương ứng số lượng đặt mua
                 p.Stock -= buyQuantity;
                 _db.Products.Update(p);
             }
@@ -179,10 +198,10 @@ public class CartController : Controller
             await _db.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            // Xóa sạch giỏ hàng trong Session sau khi đã chốt đơn thành công
+            // Làm rỗng giỏ hàng sau khi tạo đơn thành công
             CartSession.Save(HttpContext.Session, new Dictionary<int, int>());
 
-            // Điều hướng sang cổng thanh toán tương ứng với lựa chọn của khách
+            // [ĐÃ FIX] Khôi phục chuỗi tiếng Việt chuẩn UTF-8 để điều hướng đúng cổng thanh toán
             if (model.PaymentMethod == "Ví Momo")
             {
                 return RedirectToAction(nameof(MomoPayment), new { orderId = order.Id });
@@ -193,7 +212,6 @@ public class CartController : Controller
                 return RedirectToAction(nameof(AtmPayment), new { orderId = order.Id });
             }
 
-            // Trường hợp Tiền mặt (COD): Hoàn tất và chuyển thẳng sang trang Lịch sử đơn hàng
             TempData["Success"] = $"Đặt hàng thành công ({order.OrderCode})! Đơn hàng COD của bạn đang chờ duyệt.";
             return RedirectToAction(nameof(MyOrders));
         }
@@ -206,11 +224,9 @@ public class CartController : Controller
         }
     }
 
-    
-    // 3. CÁC CỔNG THANH TOÁN TRỰC TUYẾN (MOMO QR & ATM/VISA 3D)
    
-
-    // GET: Cổng thanh toán MoMo QR động
+    // 3. CÁC CỔNG THANH TOÁN TRỰC TUYẾN (MOMO & ATM / VISA)
+    
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> MomoPayment(int orderId)
@@ -224,7 +240,6 @@ public class CartController : Controller
         return View(order);
     }
 
-    // GET: Cổng thanh toán thẻ ATM / Visa 3D
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> AtmPayment(int orderId)
@@ -238,7 +253,6 @@ public class CartController : Controller
         return View(order);
     }
 
-    // POST: Nhận xác nhận hoàn tất giao dịch từ cổng MoMo hoặc ATM/Visa
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize]
     public async Task<IActionResult> ConfirmOnlinePayment(int orderId)
@@ -252,11 +266,9 @@ public class CartController : Controller
         return RedirectToAction(nameof(MyOrders));
     }
 
-   
-    // 4. LỊCH SỬ ĐƠN HÀNG CỦA KHÁCH HÀNG (MY ORDERS) & TỰ HỦY ĐƠN CHỜ DUYỆT
     
-
-    // GET: Xem danh sách tất cả đơn hàng đã đặt của tài khoản đang đăng nhập
+    // 4. LỊCH SỬ ĐƠN HÀNG & HỦY ĐƠN CHỜ DUYỆT (HOÀN KHO)
+   
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> MyOrders()
@@ -273,7 +285,6 @@ public class CartController : Controller
         return View(orders);
     }
 
-    // POST: Cho phép khách tự hủy đơn hàng nếu đơn vẫn đang ở trạng thái Chờ duyệt (Pending)
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize]
     public async Task<IActionResult> CancelMyOrder(int id)
@@ -286,6 +297,7 @@ public class CartController : Controller
 
         if (order == null) return NotFound();
 
+        // Chỉ cho phép khách tự hủy khi đơn còn ở trạng thái Chờ duyệt
         if (order.Status != OrderStatus.Pending)
         {
             TempData["Error"] = $"Đơn hàng {order.OrderCode} đã được xử lý hoặc đang giao, không thể tự hủy!";
@@ -295,7 +307,7 @@ public class CartController : Controller
         using var transaction = await _db.Database.BeginTransactionAsync();
         try
         {
-            // Hoàn trả toàn bộ số lượng thẻ bài của đơn đã hủy về lại kho
+            // Hoàn trả số lượng sản phẩm về kho
             foreach (var detail in order.OrderDetails)
             {
                 if (detail.Product != null)
@@ -323,9 +335,7 @@ public class CartController : Controller
         return RedirectToAction(nameof(MyOrders));
     }
 
-    // 5. HÀM HỖ TRỢ NỘI BỘ (HELPER)
-  
-
+    // Hàm hỗ trợ tính toán giỏ hàng và truyền sang ViewBag cho Checkout.cshtml
     private async Task LoadCartSummaryToViewBag(Dictionary<int, int> cart)
     {
         var ids = cart.Keys.ToList();

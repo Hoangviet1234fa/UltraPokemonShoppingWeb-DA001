@@ -2,14 +2,14 @@ namespace UltraPokemon.Helpers;
 
 public static class ElementHelper
 {
-    /// <summary>Màu nút/badge theo hệ: Lửa=đỏ, Nước=xanh dương, Sét=vàng, Đất=xanh lá.</summary>
+    /// <summary>Trả về màu sắc Bootstrap theo hệ nguyên tố: Lửa=đỏ, Nước=xanh dương, Sét=vàng, Đất=xanh lá.</summary>
     public static string Color(string? element)
     {
         var el = TextHelper.Normalize(element);
-        return el.Contains("lua")  ? "danger"  :
-               el.Contains("nuoc") ? "primary" :
-               el.Contains("set")  ? "warning" :
-               el.Contains("dat")  ? "success" : "secondary";
+        return el.Contains("lua") || el.Contains("fire") ? "danger" :
+               el.Contains("nuoc") || el.Contains("water") ? "primary" :
+               el.Contains("set") || el.Contains("electric") ? "warning" :
+               el.Contains("dat") || el.Contains("grass") || el.Contains("rock") ? "success" : "secondary";
     }
 
     public static string Button(string? element, bool active) =>

@@ -1,8 +1,8 @@
 ﻿namespace UltraPokemon.Models
 {
-    /// <summary>
+  
     /// ViewModel chứa toàn bộ số liệu thống kê và dữ liệu biểu đồ cho trang Admin Dashboard.
-    /// </summary>
+
     public class AdminDashboardViewModel
     {
       
@@ -37,9 +37,8 @@
         public List<Order> RecentOrders { get; set; } = new();
     }
 
-    /// <summary>
     /// Lớp phụ trợ thống kê số lượng đơn và tổng tiền theo từng phương thức thanh toán.
-    /// </summary>
+
     public class PaymentStatItem
     {
         public string MethodName { get; set; } = string.Empty;

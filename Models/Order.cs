@@ -3,10 +3,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace UltraPokemon.Models
 {
-    /// <summary>
+   
     /// Enum định nghĩa các trạng thái xử lý của đơn hàng.
     /// Attribute [Display] giúp tự động hiển thị tên tiếng Việt trên giao diện Admin.
-    /// </summary>
+   
     public enum OrderStatus
     {
         [Display(Name = "Chờ duyệt")]
@@ -22,9 +22,9 @@ namespace UltraPokemon.Models
         Cancelled = 3   // Đơn bị hủy (Hệ thống tự động hoàn trả tồn kho)
     }
 
-    /// <summary>
-    /// Entity ánh xạ tới bảng Orders trong SQL Server.
-    /// </summary>
+    
+    /// Entity ánh xạ tới bảng Orders trong cơ sở dữ liệu.
+ 
     public class Order
     {
         [Key] // Khóa chính (Primary Key), tự động tăng (Identity)
@@ -40,15 +40,16 @@ namespace UltraPokemon.Models
         public DateTime OrderDate { get; set; } = DateTime.Now;
 
         [Required]
-        [Column(TypeName = "decimal(18,2)")] // Định nghĩa chuẩn kiểu tiền tệ trong SQL Server, tránh cảnh báo EF Core
+        [Column(TypeName = "decimal(18,2)")] // Định nghĩa chuẩn kiểu tiền tệ, tránh cảnh báo EF Core
         [Display(Name = "Tổng tiền")]
         public decimal TotalAmount { get; set; }
 
         [Display(Name = "Trạng thái")]
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
+       
         // THÔNG TIN GIAO NHẬN & PHƯƠNG THỨC THANH TOÁN
-    
+       
 
         [Required(ErrorMessage = "Họ tên người nhận không được để trống.")]
         [StringLength(100, ErrorMessage = "Họ tên tối đa 100 ký tự.")]
@@ -71,20 +72,25 @@ namespace UltraPokemon.Models
         [Display(Name = "Hình thức thanh toán")]
         public string PaymentMethod { get; set; } = "Tiền mặt (COD)"; // Khớp với giá trị trong CheckoutViewModel
 
-        // THUỘC TÍNH TIỆN ÍCH & QUAN HỆ ENTITY FRAMEWORK
-       
+        // Bổ sung trường Ghi chú đơn hàng (cho phép null nếu khách không nhập)
+        [StringLength(500)]
+        [Display(Name = "Ghi chú")]
+        public string? Note { get; set; }
 
-        /// <summary>
+        // THUỘC TÍNH TIỆN ÍCH & QUAN HỆ ENTITY FRAMEWORK
+        
+
+       
         /// Thuộc tính chỉ dùng để hiển thị mã đơn đẹp (VD: #ULTRA000012).
-        /// [NotMapped] báo cho EF Core không tạo cột này trong bảng SQL Server.
-        /// </summary>
+        /// [NotMapped] báo cho EF Core không tạo cột này trong bảng dữ liệu.
+    
         [NotMapped]
         public string OrderCode => $"#ULTRA{Id:D6}";
 
-        /// <summary>
+       
         /// Quan hệ 1 - Nhiều (1-N): Một hóa đơn chứa danh sách nhiều chi tiết sản phẩm (OrderDetail).
         /// Khởi tạo sẵn List rỗng để tránh lỗi NullReferenceException khi truy xuất.
-        /// </summary>
+       
         public List<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     }
 }

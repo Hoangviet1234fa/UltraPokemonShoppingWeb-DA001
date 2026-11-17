@@ -1,0 +1,78 @@
+﻿@model IEnumerable<UltraPokemon.Models.Category>
+@{
+    ViewData["Title"] = "Quản lý danh mục hệ";
+    var productCounts = ViewBag.ProductCounts as Dictionary<string, int> ?? new Dictionary<string, int>();
+}
+
+<div class="container py-4">
+    <div class="bg-white rounded-4 shadow-sm overflow-hidden">
+        <!-- Header trang quản lý danh mục -->
+        <div class="p-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h3 class="fw-bold mb-1">Quản lý danh mục Hệ nguyên tố</h3>
+                <p class="text-muted small mb-0">Thêm, sửa, xóa các hệ thẻ bài Pokémon hiển thị trên bộ lọc cửa hàng</p>
+            </div>
+
+            <div class="d-flex gap-2">
+                <a asp-controller="Product" asp-action="Index" class="btn btn-outline-secondary fw-semibold">
+                    &larr; Danh sách thẻ bài
+                </a>
+                <a asp-action="Create" class="btn btn-success fw-semibold">
+                    + Thêm hệ mới
+                </a>
+            </div>
+        </div>
+
+        <!-- Bảng danh sách danh mục -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4" style="width: 90px;">Mã ID</th>
+                        <th>Tên hệ nguyên tố</th>
+                        <th class="text-center">Số lượng thẻ bài</th>
+                        <th class="pe-4 text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">Chưa có danh mục hệ nguyên tố nào.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            int count = productCounts.TryGetValue(item.Name, out var c) ? c : 0;
+
+                            <tr>
+                                <td class="ps-4 fw-bold text-muted">#@item.Id</td>
+                                <td class="fw-bold text-dark">@item.Name</td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1">
+                                        @count thẻ bài
+                                    </span>
+                                </td>
+                                <td class="pe-4 text-end text-nowrap">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning text-dark btn-sm fw-semibold">
+                                        Sửa
+                                    </a>
+
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                          onsubmit="return confirm('Bạn có chắc muốn xóa hệ @item.Name không?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-outline-danger btn-sm fw-semibold">
+                                            Xóa
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

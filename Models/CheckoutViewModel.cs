@@ -2,10 +2,10 @@
 
 namespace UltraPokemon.Models
 {
-    /// <summary>
+    
     /// ViewModel hứng dữ liệu từ Form Checkout.
     /// Bắt buộc nhập đầy đủ thông tin người nhận cho mọi phương thức vì sản phẩm là thẻ bài vật lý cần giao hàng.
-    /// </summary>
+ 
     public class CheckoutViewModel
     {
         [Required(ErrorMessage = "Vui lòng nhập họ tên người nhận.")]

@@ -3,85 +3,109 @@
     ViewData["Title"] = "Giỏ hàng";
 }
 
-<h2>Giỏ hàng</h2>
+<div class="bg-white rounded-4 shadow-sm p-4 my-3">
+    <h2 class="fw-bold mb-3">Giỏ hàng của bạn</h2>
 
-<!-- Chỉ giữ lại DUY NHẤT một khối bắt thông báo ở đây để tránh bị lặp -->
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger mt-2">
-        @TempData["Error"]
-    </div>
-}
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success mt-2">
-        @TempData["Success"]
-    </div>
-}
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info mb-0">
+            Giỏ hàng đang trống.
+            <a asp-controller="Product" asp-action="Index" class="fw-bold text-decoration-none ms-1">Tiếp tục mua sắm</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mt-2">
+                <thead class="table-light">
+                    <tr>
+                        <th>Thẻ bài</th>
+                        <th>Hệ</th>
+                        <th class="text-end">Đơn giá</th>
+                        <th class="text-center" style="width: 170px;">Số lượng</th>
+                        <th class="text-end">Thành tiền</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in Model)
+                    {
+                        <tr>
+                            <td>
+                                <a asp-controller="Product" asp-action="Details" asp-route-id="@l.Product.Id" class="text-decoration-none fw-bold text-dark">
+                                    @l.Product.Name
+                                </a>
+                                <div class="small text-muted">Kho còn: @l.Product.Stock lá</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">@l.Product.ElementType</span>
+                            </td>
+                            <td class="text-end">@l.Product.Price.ToString("N0") VNĐ</td>
 
-@if (!Model.Any())
-{
-    <div class="alert alert-info mt-3">
-        Giỏ hàng đang trống.
-        <a asp-controller="Product" asp-action="Index" class="fw-bold text-decoration-none">Tiếp tục mua sắm</a>
-    </div>
-}
-else
-{
-    <table class="table align-middle mt-3">
-        <thead>
-            <tr>
-                <th>Thẻ bài</th>
-                <th>Hệ</th>
-                <th class="text-end">Đơn giá</th>
-                <th class="text-center">SL</th>
-                <th class="text-end">Thành tiền</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var l in Model)
-            {
-                <tr>
-                    <td>
-                        <a asp-controller="Product" asp-action="Details" asp-route-id="@l.Product.Id" class="text-decoration-none fw-bold">
-                            @l.Product.Name
-                        </a>
-                    </td>
-                    <td>@l.Product.ElementType</td>
-                    <td class="text-end">@l.Product.Price.ToString("N0") VNĐ</td>
-                    <td class="text-center">@l.Quantity</td>
-                    <td class="text-end">@l.Total.ToString("N0") VNĐ</td>
-                    <td class="text-end">
-                        <form asp-action="Remove" method="post">
-                            <input type="hidden" name="id" value="@l.Product.Id" />
-                            <button type="submit" class="btn btn-outline-danger btn-sm">Xóa</button>
-                        </form>
-                    </td>
-                </tr>
-            }
-        </tbody>
-        <tfoot>
-            <tr class="table-light">
-                <th colspan="4" class="text-end fs-5">Tổng cộng</th>
-                <th class="text-end text-danger fs-5 fw-bold">@Model.Sum(l => l.Total).ToString("N0") VNĐ</th>
-                <th></th>
-            </tr>
-        </tfoot>
-    </table>
+                            <!-- Cụm nút giảm [-] / nhập số lượng / tăng [+] -->
+                            <td class="text-center">
+                                <div class="d-inline-flex align-items-center justify-content-center gap-1">
+                                    <form asp-action="UpdateQuantity" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@l.Product.Id" />
+                                        <input type="hidden" name="quantity" value="@(l.Quantity - 1)" />
+                                        <button type="submit" class="btn btn-outline-secondary btn-sm px-2 fw-bold" title="Giảm số lượng">-</button>
+                                    </form>
 
-    <!-- Nhóm các nút điều hướng và thanh toán -->
-    <div class="d-flex justify-content-between align-items-center mt-4">
-        <div>
-            <form asp-action="Clear" method="post" class="d-inline">
-                <button type="submit" class="btn btn-outline-secondary">Xóa toàn bộ giỏ</button>
-            </form>
-            <a asp-controller="Product" asp-action="Index" class="btn btn-primary ms-2">Tiếp tục mua sắm</a>
+                                    <form asp-action="UpdateQuantity" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@l.Product.Id" />
+                                        <input type="number" name="quantity" value="@l.Quantity" min="1" max="@l.Product.Stock"
+                                               class="form-control form-control-sm text-center fw-bold"
+                                               style="width: 58px;"
+                                               onchange="this.form.submit()" />
+                                    </form>
+
+                                    <form asp-action="UpdateQuantity" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@l.Product.Id" />
+                                        <input type="hidden" name="quantity" value="@(l.Quantity + 1)" />
+                                        <button type="submit" class="btn btn-outline-secondary btn-sm px-2 fw-bold"
+                                            @(l.Quantity >= l.Product.Stock ? "disabled" : "") title="Tăng số lượng">
+                                            +
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+
+                            <td class="text-end fw-semibold">@l.Total.ToString("N0") VNĐ</td>
+                            <td class="text-end">
+                                <form asp-action="Remove" method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@l.Product.Id" />
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">Xóa</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="table-light">
+                        <th colspan="4" class="text-end fs-5">Tổng cộng</th>
+                        <th class="text-end text-danger fs-5 fw-bold">@Model.Sum(l => l.Total).ToString("N0") VNĐ</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
 
-        <div>
-            <!-- ĐÃ SỬA: Đổi từ form POST thành thẻ <a> trỏ đến trang Checkout để điền thông tin khách hàng -->
-            <a asp-action="Checkout" class="btn btn-success btn-lg fw-bold px-4">Xác nhận Thanh toán</a>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
+            <div class="d-flex gap-2">
+                <form asp-action="Clear" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-secondary">Xóa toàn bộ giỏ</button>
+                </form>
+                <a asp-controller="Product" asp-action="Index" class="btn btn-primary">Tiếp tục mua sắm</a>
+            </div>
+
+            <div>
+                <a asp-action="Checkout" class="btn btn-success btn-lg fw-bold px-4">Xác nhận Thanh toán</a>
+            </div>
         </div>
-    </div>
-}
+    }
+</div>

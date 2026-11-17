@@ -1,31 +1,34 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using UltraPokemon.Data;
 using UltraPokemon.Models;
 
+
+// 1. KHỞI TẠO BUILDER & ĐĂNG KÝ CÁC DỊCH VỤ (DEPENDENCY INJECTION CONTAINER)
+
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Đăng ký dịch vụ MVC
 builder.Services.AddControllersWithViews();
 
-// 2. Cấu hình Database SQLite
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=ultrapokemon.db"));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 3. Cấu hình Cookie Authentication
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/Account/Login";
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromHours(12);
     });
 
-// 4. Đăng ký dịch vụ Session cho giỏ hàng
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.IdleTimeout = TimeSpan.FromMinutes(60);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
@@ -33,108 +36,99 @@ builder.Services.AddSession(options =>
 var app = builder.Build();
 
 
-// TỰ ĐỘNG TẠO DATABASE, NẠP DỮ LIỆU MẪU & ĐỒNG BỘ ẢNH THẺ BÀI
+// 2. TỰ ĐỘNG KHỞI TẠO DATABASE & NẠP DỮ LIỆU MẪU (SEED DATA) KHI CHẠY LẦN ĐẦU
 
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<AppDbContext>();
+    var passwordHasher = services.GetRequiredService<IPasswordHasher<User>>();
 
-    // Tạo Database nếu chưa tồn tại
-    dbContext.Database.EnsureCreated();
+    context.Database.EnsureCreated();
 
-    // 1. Danh sách 12 thẻ bài mẫu đồng bộ với database_script.sql & wwwroot/images
-    var seedProducts = new List<Product>
+    // BƯỚC 2.1: Nạp dữ liệu mẫu cho bảng Categories
+    if (!context.Categories.Any())
     {
-        new() { Name = "Charizard",  Price = 450000, Stock = 10, ElementType = "Fire",     Power = 200, ImageUrl = "/images/Charizard.jpeg",  Description = "Lá bài lửa huyền thoại hệ rồng lửa, sức công phá vô song." },
-        new() { Name = "Blastoise",  Price = 400000, Stock = 8,  ElementType = "Water",    Power = 180, ImageUrl = "/images/Blastoise.png",   Description = "Lá bài nước mạnh mẽ sở hữu 2 khẩu đại bác thủy lực dũng mãnh." },
-        new() { Name = "Raichu",     Price = 120000, Stock = 15, ElementType = "Electric", Power = 150, ImageUrl = "/images/raichu.jpg",      Description = "Lá bài điện chớp nhoáng với chiếc đuôi tích điện công suất lớn." },
-        new() { Name = "Jolteon",    Price = 90000,  Stock = 12, ElementType = "Electric", Power = 140, ImageUrl = "/images/Jolteon.jpg",     Description = "Tiến hóa hệ điện của Eevee, lông gai phóng ra ngàn tia sét." },
-        new() { Name = "Onix",       Price = 60000,  Stock = 20, ElementType = "Rock",     Power = 130, ImageUrl = "/images/onix.jpg",        Description = "Rắn đá khổng lồ hệ đất đá cứng cáp, phòng thủ tuyệt hảo." },
-        new() { Name = "Pikachu",    Price = 150000, Stock = 25, ElementType = "Electric", Power = 110, ImageUrl = "/images/pikachu.png",     Description = "Chú chuột điện vàng đáng yêu, biểu tượng của thế giới Pokémon." },
-        new() { Name = "Vulpix",     Price = 50000,  Stock = 18, ElementType = "Fire",     Power = 90,  ImageUrl = "/images/Vulpix.png",      Description = "Hồ ly lửa sáu đuôi xinh xắn, kiểm soát những đốm lửa ma trơi." },
-        new() { Name = "Psyduck",    Price = 70000,  Stock = 14, ElementType = "Water",    Power = 95,  ImageUrl = "/images/psyduck.png",     Description = "Vịt khờ hệ nước, bộc phát sức mạnh tâm linh kỳ bí khi đau đầu." },
-        new() { Name = "Charmander", Price = 80000,  Stock = 10, ElementType = "Fire",     Power = 100, ImageUrl = "/images/Charmander.jpeg", Description = "Khủng long lửa nhỏ với ngọn lửa luôn bùng cháy nơi chóp đuôi." },
-        new() { Name = "Squirtle",   Price = 85000,  Stock = 12, ElementType = "Water",    Power = 105, ImageUrl = "/images/squirtle.jpg",    Description = "Rùa nước tinh nghịch có mai rùa cứng cáp và khả năng bắn tia nước." },
-        new() { Name = "Diglett",    Price = 40000,  Stock = 20, ElementType = "Rock",     Power = 80,  ImageUrl = "/images/Diglett.png",     Description = "Pokémon chuột chũi di chuyển ngầm dưới lòng đất cực nhanh." },
-        new() { Name = "Sandshrew",  Price = 45000,  Stock = 15, ElementType = "Rock",     Power = 85,  ImageUrl = "/images/sandshrew.jpg",   Description = "Tê tê cát hệ đất cuộn tròn mình lại để chống đỡ đòn đánh của kẻ địch." }
-    };
-
-    // Bổ sung những thẻ bài còn thiếu vào DB mà không làm mất dữ liệu đơn hàng cũ
-    var existingNames = dbContext.Products
-        .Select(p => p.Name.ToLower())
-        .ToHashSet();
-
-    var missingProducts = seedProducts
-        .Where(sp => !existingNames.Contains(sp.Name.ToLower()))
-        .ToList();
-
-    if (missingProducts.Any())
-    {
-        dbContext.Products.AddRange(missingProducts);
-        dbContext.SaveChanges();
+        context.Categories.AddRange(
+            new Category { Name = "Fire", Description = "Thẻ bài Pokémon hệ Lửa rực cháy" },
+            new Category { Name = "Water", Description = "Thẻ bài Pokémon hệ Nước linh hoạt" },
+            new Category { Name = "Electric", Description = "Thẻ bài Pokémon hệ Điện tốc độ cao" },
+            new Category { Name = "Rock", Description = "Thẻ bài Pokémon hệ Đá phòng thủ vững chắc" },
+            new Category { Name = "Grass", Description = "Thẻ bài Pokémon hệ Cỏ bền bỉ" },
+            new Category { Name = "Psychic", Description = "Thẻ bài Pokémon hệ Tâm Linh huyền bí" }
+        );
+        context.SaveChanges();
     }
 
-    // 2. Tự động đồng bộ ImageUrl từ thư mục wwwroot/images cho toàn bộ sản phẩm trong SQLite
-    var imagesDir = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "images");
-    if (Directory.Exists(imagesDir))
+    // BƯỚC 2.2: Nạp đủ 12 thẻ bài Pokémon gốc sử dụng ảnh trong wwwroot/images
+    if (!context.Products.Any())
     {
-        var imageFiles = Directory.GetFiles(imagesDir);
-        var existingProducts = dbContext.Products.ToList();
-        bool hasImageUpdates = false;
-
-        foreach (var product in existingProducts)
-        {
-            var cleanName = product.Name.Trim().Replace(" ", "").Replace("-", "");
-            var matchedFile = imageFiles.FirstOrDefault(file =>
-                Path.GetFileNameWithoutExtension(file)
-                    .Replace(" ", "")
-                    .Replace("-", "")
-                    .Equals(cleanName, StringComparison.OrdinalIgnoreCase));
-
-            if (matchedFile != null)
-            {
-                var webImagePath = "/images/" + Path.GetFileName(matchedFile);
-                if (product.ImageUrl != webImagePath)
-                {
-                    product.ImageUrl = webImagePath;
-                    hasImageUpdates = true;
-                }
-            }
-        }
-
-        if (hasImageUpdates)
-        {
-            dbContext.SaveChanges();
-        }
+        context.Products.AddRange(
+            new Product { Name = "Charizard", ElementType = "Fire", Power = 200, Price = 450000, Stock = 10, Description = "Lá bài lửa huyền thoại hệ rồng lửa, sức công phá vô song.", ImageUrl = "/images/Charizard.jpeg" },
+            new Product { Name = "Blastoise", ElementType = "Water", Power = 180, Price = 400000, Stock = 8, Description = "Lá bài nước mạnh mẽ sở hữu 2 khẩu đại bác thủy lực dũng mãnh.", ImageUrl = "/images/Blastoise.png" },
+            new Product { Name = "Raichu", ElementType = "Electric", Power = 150, Price = 120000, Stock = 15, Description = "Lá bài điện chớp nhoáng với chiếc đuôi tích điện công suất lớn.", ImageUrl = "/images/raichu.jpg" },
+            new Product { Name = "Jolteon", ElementType = "Electric", Power = 140, Price = 90000, Stock = 12, Description = "Tiến hóa hệ điện của Eevee, lông gai phóng ra ngàn tia sét.", ImageUrl = "/images/Jolteon.jpg" },
+            new Product { Name = "Onix", ElementType = "Rock", Power = 130, Price = 60000, Stock = 20, Description = "Rắn đá khổng lồ hệ đất đá cứng cáp, phòng thủ tuyệt hảo.", ImageUrl = "/images/onix.jpg" },
+            new Product { Name = "Pikachu", ElementType = "Electric", Power = 110, Price = 150000, Stock = 25, Description = "Chú chuột điện vàng đáng yêu, biểu tượng của thế giới Pokémon.", ImageUrl = "/images/pikachu.png" },
+            new Product { Name = "Vulpix", ElementType = "Fire", Power = 90, Price = 50000, Stock = 18, Description = "Hồ ly lửa sáu đuôi xinh xắn, kiểm soát những đốm lửa ma trơi.", ImageUrl = "/images/Vulpix.png" },
+            new Product { Name = "Psyduck", ElementType = "Water", Power = 95, Price = 70000, Stock = 14, Description = "Vịt khờ hệ nước, bộc phát sức mạnh tâm linh kỳ bí khi đau đầu.", ImageUrl = "/images/psyduck.png" },
+            new Product { Name = "Charmander", ElementType = "Fire", Power = 100, Price = 80000, Stock = 10, Description = "Khủng long lửa nhỏ với ngọn lửa luôn bùng cháy nơi chóp đuôi.", ImageUrl = "/images/Charmander.jpeg" },
+            new Product { Name = "Squirtle", ElementType = "Water", Power = 105, Price = 85000, Stock = 12, Description = "Rùa nước tinh nghịch có mai rùa cứng cáp và khả năng bắn tia nước.", ImageUrl = "/images/squirtle.jpg" },
+            new Product { Name = "Diglett", ElementType = "Rock", Power = 80, Price = 40000, Stock = 20, Description = "Pokémon chuột chũi di chuyển ngầm dưới lòng đất cực nhanh.", ImageUrl = "/images/Diglett.png" },
+            new Product { Name = "Sandshrew", ElementType = "Rock", Power = 85, Price = 45000, Stock = 15, Description = "Tê tê cát hệ đất cuộn tròn mình lại để chống đỡ đòn đánh của kẻ địch.", ImageUrl = "/images/sandshrew.jpg" }
+        );
+        context.SaveChanges();
     }
 
-    // 3. Tự động tạo tài khoản Admin mẫu (Email: admin@ultrapokemon.com | Mật khẩu: 123)
-    if (!dbContext.Users.Any(u => u.Email == "admin@ultrapokemon.com"))
+    // BƯỚC 2.3: Nạp 3 tài khoản mẫu với Role kiểu string ("Admin", "Staff", "Customer")
+    if (!context.Users.Any())
     {
-        var passwordHasher = new PasswordHasher<User>();
-        var adminUser = new User
+        var admin = new User
         {
-            Email = "admin@ultrapokemon.com",
+            FullName = "Quản Trị Viên",
+            Email = "admin@ultrapokemon.vn",
             Role = "Admin",
             IsApproved = true
         };
+        admin.PasswordHash = passwordHasher.HashPassword(admin, "123456");
 
-        adminUser.PasswordHash = passwordHasher.HashPassword(adminUser, "123");
+        var staff = new User
+        {
+            FullName = "Nhân Viên Kho",
+            Email = "staff@ultrapokemon.vn",
+            Role = "Staff",
+            IsApproved = true
+        };
+        staff.PasswordHash = passwordHasher.HashPassword(staff, "123456");
 
-        dbContext.Users.Add(adminUser);
-        dbContext.SaveChanges();
+        var customer = new User
+        {
+            FullName = "Satoshi Ketchum",
+            Email = "customer@ultrapokemon.vn",
+            Role = "Customer",
+            IsApproved = true
+        };
+        customer.PasswordHash = passwordHasher.HashPassword(customer, "123456");
+
+        context.Users.AddRange(admin, staff, customer);
+        context.SaveChanges();
     }
 }
+
+
+// 3. CẤU HÌNH HTTP REQUEST PIPELINE (MIDDLEWARE)
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
 }
 
+app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
 
-// Kích hoạt Session Middleware (Phải đặt trước UseAuthentication và UseAuthorization)
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();

@@ -1,97 +1,33 @@
 @model IEnumerable<UltraPokemon.Models.Product>
-@using UltraPokemon.Data
 @using UltraPokemon.Models
-@inject AppDbContext _db
+@using UltraPokemon.Helpers
 @inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment _env
 @{
     ViewData["Title"] = "Danh sách thẻ bài Pokémon";
 
-    // 1. Lấy các tham số lọc từ thanh địa chỉ URL
-    string searchString = Context.Request.Query["searchString"].ToString().Trim();
-    string selectedElement = Context.Request.Query["elementType"].ToString().Trim();
-    string sortOrder = Context.Request.Query["sortOrder"].ToString().Trim();
+    string searchString = ViewBag.CurrentFilter ?? string.Empty;
+    string selectedElement = ViewBag.CurrentElement ?? string.Empty;
+    string sortOrder = ViewBag.CurrentSort ?? string.Empty;
+    var availableElements = ViewBag.Elements as List<string> ?? new List<string>();
 
-    // 2. Lấy toàn bộ danh sách sản phẩm gốc để trích xuất danh sách Hệ nguyên tố
-    var allProducts = _db.Products.ToList();
-    var availableElements = allProducts
-        .Where(p => !string.IsNullOrWhiteSpace(p.ElementType))
-        .Select(p => p.ElementType.Trim())
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .OrderBy(e => e)
-        .ToList();
+    int totalItems = ViewBag.TotalItems ?? Model.Count();
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    bool isAdmin = User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin");
 
-    // 3. Nguồn dữ liệu hiển thị (Ưu tiên Model từ Controller; tự động lọc bổ sung theo Hệ & Sắp xếp)
-    IEnumerable<Product> query = (Model != null) ? Model : allProducts;
-
-    if (!string.IsNullOrWhiteSpace(selectedElement))
-    {
-        query = query.Where(p => string.Equals(p.ElementType?.Trim(), selectedElement, StringComparison.OrdinalIgnoreCase));
-    }
-
-    query = sortOrder switch
-    {
-        "price_asc" => query.OrderBy(p => p.Price),
-        "price_desc" => query.OrderByDescending(p => p.Price),
-        "name_asc" => query.OrderBy(p => p.Name),
-        "newest" => query.OrderByDescending(p => p.Id),
-        _ => query
-    };
-
-    var productList = query.ToList();
     bool hasActiveFilter = !string.IsNullOrWhiteSpace(searchString)
                         || !string.IsNullOrWhiteSpace(selectedElement)
                         || !string.IsNullOrWhiteSpace(sortOrder);
-
-    // 4. Hàm tự động tìm đường dẫn ảnh thẻ bài (Hỗ trợ ImageUrl và file ảnh trong wwwroot/images)
-    string ResolveCardImage(Product p)
-    {
-        if (!string.IsNullOrWhiteSpace(p.ImageUrl))
-        {
-            return p.ImageUrl.StartsWith("~") ? Url.Content(p.ImageUrl) : p.ImageUrl;
-        }
-
-        if (!string.IsNullOrEmpty(_env.WebRootPath))
-        {
-            var imagesDir = System.IO.Path.Combine(_env.WebRootPath, "images");
-            if (System.IO.Directory.Exists(imagesDir))
-            {
-                var rawName = p.Name.Trim();
-                var slugName = rawName.ToLowerInvariant().Replace(" ", "-");
-                var plainName = rawName.ToLowerInvariant().Replace(" ", "");
-
-                var matchedFile = System.IO.Directory
-                    .EnumerateFiles(imagesDir, "*.*", System.IO.SearchOption.AllDirectories)
-                    .FirstOrDefault(f =>
-                    {
-                        var fileName = System.IO.Path.GetFileNameWithoutExtension(f);
-                        return fileName.Equals(rawName, StringComparison.OrdinalIgnoreCase)
-                            || fileName.Equals(slugName, StringComparison.OrdinalIgnoreCase)
-                            || fileName.Equals(plainName, StringComparison.OrdinalIgnoreCase)
-                            || fileName.Equals(p.Id.ToString(), StringComparison.OrdinalIgnoreCase);
-                    });
-
-                if (matchedFile != null)
-                {
-                    return "/" + System.IO.Path.GetRelativePath(_env.WebRootPath, matchedFile).Replace("\\", "/");
-                }
-            }
-        }
-
-        return string.Empty;
-    }
 }
 
 <div class="container py-3">
-  
-    <!-- 1. KHỐI TIÊU ĐỀ & BỘ LỌC TÌM KIẾM (NỀN TRẮNG TƯƠNG PHẢN CAO)          -->
-    
+    <!-- 1. KHỐI TIÊU ĐỀ & BỘ LỌC TÌM KIẾM -->
     <div class="bg-white rounded-4 shadow-sm p-4 mb-4">
-        <!-- Dòng tiêu đề & Bộ đếm kết quả -->
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-3 mb-3 border-bottom">
             <div>
                 <h3 class="fw-bold text-dark mb-1">Danh Sách Thẻ Bài Pokémon</h3>
                 <p class="text-muted small mb-0">
-                    Tìm thấy <strong class="text-primary">@productList.Count</strong> thẻ bài phù hợp
+                    Tìm thấy <strong class="text-primary">@totalItems</strong> thẻ bài phù hợp
                     @if (!string.IsNullOrWhiteSpace(searchString))
                     {
                         <span>cho từ khóa "<strong>@searchString</strong>"</span>
@@ -99,16 +35,36 @@
                 </p>
             </div>
 
-            <!-- Nút Đặt lại bộ lọc (Chỉ nổi bật khi đang có điều kiện lọc) -->
-            @if (hasActiveFilter)
-            {
-                <a asp-controller="Product" asp-action="Index"
-                   class="btn btn-sm btn-outline-danger fw-semibold px-3 rounded-3 d-inline-flex align-items-center gap-1">
-                    <i class="bi bi-x-circle"></i>
-                    <span>Xóa bộ lọc</span>
-                </a>
-            }
+            <div class="d-flex align-items-center gap-2">
+                @if (hasActiveFilter)
+                {
+                    <a asp-controller="Product" asp-action="Index"
+                       class="btn btn-sm btn-outline-danger fw-semibold px-3 rounded-3 d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-x-circle"></i>
+                        <span>Xóa bộ lọc</span>
+                    </a>
+                }
+
+                @if (isAdmin)
+                {
+                    <a asp-controller="Categories" asp-action="Index"
+                       class="btn btn-sm btn-outline-primary fw-semibold px-3 rounded-3 d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-tags"></i>
+                        <span>Quản lý Hệ</span>
+                    </a>
+                    <a asp-controller="Product" asp-action="Create"
+                       class="btn btn-sm btn-success fw-semibold px-3 rounded-3 d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Thêm thẻ bài mới</span>
+                    </a>
+                }
+            </div>
         </div>
+
+        @if (ViewBag.SearchNote != null)
+        {
+            <div class="alert alert-info py-2 small mb-3">@ViewBag.SearchNote</div>
+        }
 
         <!-- Form Tìm kiếm & Sắp xếp -->
         <form asp-controller="Product" asp-action="Index" method="get" class="row g-2 align-items-center mb-3">
@@ -117,7 +73,6 @@
                 <input type="hidden" name="elementType" value="@selectedElement" />
             }
 
-            <!-- Ô nhập từ khóa -->
             <div class="col-lg-6">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0 text-muted">
@@ -129,18 +84,17 @@
                 </div>
             </div>
 
-            <!-- Dropdown sắp xếp -->
             <div class="col-sm-8 col-lg-4">
                 <select name="sortOrder" class="form-select" onchange="this.form.submit()">
-                    <option value="" selected="@(string.IsNullOrEmpty(sortOrder))">Sắp xếp mặc định</option>
+                    <option value="" selected="@(string.IsNullOrEmpty(sortOrder))">Sắp xếp mặc định (A &rarr; Z)</option>
                     <option value="price_asc" selected="@(sortOrder == "price_asc")">Giá: Thấp đến Cao</option>
                     <option value="price_desc" selected="@(sortOrder == "price_desc")">Giá: Cao đến Thấp</option>
-                    <option value="name_asc" selected="@(sortOrder == "name_asc")">Tên thẻ: A → Z</option>
+                    <option value="power_desc" selected="@(sortOrder == "power_desc")">Sức mạnh: Cao nhất</option>
+                    <option value="name_desc" selected="@(sortOrder == "name_desc")">Tên thẻ: Z &rarr; A</option>
                     <option value="newest" selected="@(sortOrder == "newest")">Mới cập nhật</option>
                 </select>
             </div>
 
-            <!-- Nút Tìm kiếm -->
             <div class="col-sm-4 col-lg-2">
                 <button type="submit" class="btn btn-primary fw-semibold w-100 d-inline-flex align-items-center justify-content-center gap-1">
                     <i class="bi bi-search"></i>
@@ -157,7 +111,7 @@
                asp-route-searchString="@searchString"
                asp-route-sortOrder="@sortOrder"
                class="tcg-filter-pill @(string.IsNullOrEmpty(selectedElement) ? "active" : "")">
-                Tất cả (@allProducts.Count)
+                Tất cả
             </a>
 
             @foreach (var el in availableElements)
@@ -174,10 +128,8 @@
         </div>
     </div>
 
-    
-    <!-- 2. LƯỚI HIỂN THỊ DANH SÁCH THẺ BÀI    -->
-
-    @if (!productList.Any())
+    <!-- 2. LƯỚI HIỂN THỊ DANH SÁCH THẺ BÀI -->
+    @if (!Model.Any())
     {
         <div class="bg-white rounded-4 shadow-sm p-5 text-center">
             <div class="text-muted mb-2"><i class="bi bi-search fs-1"></i></div>
@@ -191,40 +143,31 @@
     else
     {
         <div class="row g-4">
-            @foreach (var item in productList)
+            @foreach (var item in Model)
             {
                 bool inStock = item.Stock > 0;
-                string cardImg = ResolveCardImage(item);
+                string cardImg = ImageHelper.Resolve(_env, item);
 
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden tcg-product-card">
-                        <!-- Khung ảnh lá bài -->
                         <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
                            class="tcg-img-stage text-decoration-none position-relative">
-                            @if (!string.IsNullOrEmpty(cardImg))
-                            {
-                                <img src="@cardImg" alt="@item.Name" class="tcg-card-photo" loading="lazy" />
-                            }
-                            else
-                            {
-                                <div class="text-center text-muted p-4">
-                                    <i class="bi bi-card-image fs-1 d-block mb-1"></i>
-                                    <span class="small">Chưa có ảnh</span>
-                                </div>
-                            }
+                            <img src="@cardImg"
+                                 onerror="this.onerror=null;this.src=this.dataset.fallback;"
+                                 data-fallback="@ImageHelper.Placeholder(item)"
+                                 alt="@item.Name" class="tcg-card-photo" loading="lazy" />
 
-                            <!-- Nhãn tồn kho -->
                             <span class="badge @(inStock ? "bg-dark bg-opacity-75" : "bg-danger") position-absolute top-0 end-0 m-2 px-2 py-1">
                                 @(inStock ? $"Còn {item.Stock}" : "Hết hàng")
                             </span>
                         </a>
 
-                        <!-- Nội dung chi tiết thẻ -->
                         <div class="card-body d-flex flex-column p-3">
-                            <div class="mb-1">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size: 0.72rem;">
                                     Hệ @(string.IsNullOrWhiteSpace(item.ElementType) ? "Phổ thông" : item.ElementType)
                                 </span>
+                                <span class="small text-muted fw-semibold">⚡ @item.Power</span>
                             </div>
 
                             <h6 class="fw-bold text-dark mb-2 text-truncate" title="@item.Name">
@@ -256,7 +199,7 @@
                                             <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
                                             <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100 d-inline-flex align-items-center justify-content-center gap-1">
                                                 <i class="bi bi-bag-plus"></i>
-                                                <span>Thêm vào giỏ hàng</span>
+                                                <span>Thêm vào giỏ hàng </span>
                                             </button>
                                         </form>
                                     }
@@ -267,17 +210,71 @@
                                         </button>
                                     }
                                 </div>
+
+                                @if (isAdmin)
+                                {
+                                    <div class="d-flex gap-2 mt-2 pt-2 border-top">
+                                        <a asp-controller="Product" asp-action="Edit" asp-route-id="@item.Id"
+                                           class="btn btn-outline-warning text-dark btn-sm fw-semibold flex-grow-1">
+                                            <i class="bi bi-pencil-square me-1"></i>Sửa
+                                        </a>
+                                        <a asp-controller="Product" asp-action="Delete" asp-route-id="@item.Id"
+                                           class="btn btn-outline-danger btn-sm fw-semibold flex-grow-1">
+                                            <i class="bi bi-trash3 me-1"></i>Xóa
+                                        </a>
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
                 </div>
             }
         </div>
+
+        <!-- 3. THANH PHÂN TRANG -->
+        @if (totalPages > 1)
+        {
+            <nav aria-label="Phân trang thẻ bài" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-page="@(currentPage - 1)"
+                           asp-route-searchString="@searchString"
+                           asp-route-elementType="@selectedElement"
+                           asp-route-sortOrder="@sortOrder">
+                            &laquo; Trước
+                        </a>
+                    </li>
+
+                    @for (int i = 1; i <= totalPages; i++)
+                    {
+                        <li class="page-item @(i == currentPage ? "active" : "")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-page="@i"
+                               asp-route-searchString="@searchString"
+                               asp-route-elementType="@selectedElement"
+                               asp-route-sortOrder="@sortOrder">
+                                @i
+                            </a>
+                        </li>
+                    }
+
+                    <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-page="@(currentPage + 1)"
+                           asp-route-searchString="@searchString"
+                           asp-route-elementType="@selectedElement"
+                           asp-route-sortOrder="@sortOrder">
+                            Sau &raquo;
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        }
     }
 </div>
 
 <style>
-    /* Nút lọc nhanh theo Hệ nguyên tố */
     .tcg-filter-pill {
         display: inline-block;
         padding: 5px 14px;
@@ -302,7 +299,6 @@
             border-color: #0f172a;
         }
 
-    /* Card hiển thị lá bài */
     .tcg-product-card {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }

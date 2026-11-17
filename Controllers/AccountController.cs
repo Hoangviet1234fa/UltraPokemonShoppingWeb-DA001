@@ -19,18 +19,19 @@ namespace UltraPokemon.Controllers
             _passwordHasher = new PasswordHasher<User>();
         }
 
-        // 1. CHỨC NĂNG ĐĂNG KÝ (REGISTER)
        
+        // 1. CHỨC NĂNG ĐĂNG KÝ TÀI KHOẢN (REGISTER)
+ 
         [HttpGet]
         public IActionResult Register() => View();
 
         [HttpPost]
-        [ValidateAntiForgeryToken] // Chống tấn công giả mạo (CSRF)
+        [ValidateAntiForgeryToken] // Chống tấn công giả mạo yêu cầu từ trang khác (CSRF)
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
             if (!ModelState.IsValid) return View(model);
 
-            // Kiểm tra email đã tồn tại trong CSDL chưa (Tránh đăng ký trùng lặp)
+            // Kiểm tra Email đã tồn tại trong CSDL chưa để tránh đăng ký trùng
             var existingUser = _context.Users.FirstOrDefault(u => u.Email == model.Email);
             if (existingUser != null)
             {
@@ -38,45 +39,42 @@ namespace UltraPokemon.Controllers
                 return View(model);
             }
 
-            // Khởi tạo tài khoản mới
+            // Khởi tạo đối tượng tài khoản mới
             var newUser = new User
             {
                 Email = model.Email,
 
-                // BUSINESS LOGIC QUAN TRỌNG: 
-                // Gán cứng (Hardcode) quyền là "User". 
-                // Việc gán cứng ở đây đảm bảo dù ai đó cố tình dùng tool sửa code HTML gửi lên role "Admin" thì vẫn bị ép thành "User".
+                // Gán cứng quyền "User" tại Server để ngăn chặn tấn công leo thang đặc quyền "Admin"
                 Role = "User",
 
-                // Tự động phê duyệt để khách có thể đăng nhập và mua hàng ngay lập tức
+                // Tự động kích hoạt để người dùng có thể đăng nhập và mua hàng ngay
                 IsApproved = true
             };
 
-            // Băm mật khẩu (Mã hóa 1 chiều) trước khi lưu vào CSDL để bảo mật thông tin khách hàng
+            // Mã hóa mật khẩu một chiều (Hash) trước khi lưu xuống CSDL
             newUser.PasswordHash = _passwordHasher.HashPassword(newUser, model.Password);
 
-            // Lưu vào Database
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.";
+            // [ĐÃ FIX] Sử dụng key "Success" khớp với khu vực hiển thị thông báo của _Layout.cshtml
+            TempData["Success"] = "Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.";
             return RedirectToAction("Login");
         }
 
-
-       
-        // 2. CHỨC NĂNG ĐĂNG NHẬP (LOGIN)
         
+        // 2. CHỨC NĂNG ĐĂNG NHẬP (LOGIN)
+      
         [HttpGet]
         public IActionResult Login() => View();
 
         [HttpPost]
-        [ValidateAntiForgeryToken] // Chống tấn công giả mạo (CSRF)
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
             if (!ModelState.IsValid) return View(model);
 
-            // Tìm kiếm tài khoản trong CSDL thông qua Email
+            // Tìm tài khoản theo Email trong CSDL
             var user = _context.Users.FirstOrDefault(u => u.Email == model.Email);
             if (user == null)
             {
@@ -84,7 +82,7 @@ namespace UltraPokemon.Controllers
                 return View(model);
             }
 
-            // Giải mã mật khẩu băm trong CSDL và so sánh với mật khẩu người dùng vừa nhập
+            // So khớp mật khẩu nhập vào với chuỗi mật khẩu đã băm trong CSDL
             var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, model.Password);
             if (result == PasswordVerificationResult.Failed)
             {
@@ -92,51 +90,47 @@ namespace UltraPokemon.Controllers
                 return View(model);
             }
 
-            // Kiểm tra trạng thái tài khoản (Tránh trường hợp Admin đã khóa/vô hiệu hóa tài khoản này)
+            // Kiểm tra trạng thái khóa/phê duyệt của tài khoản
             if (!user.IsApproved)
             {
                 ModelState.AddModelError("", "Tài khoản của bạn đã bị khóa hoặc chưa được phê duyệt!");
                 return View(model);
             }
 
-            // Tạo các thông tin định danh (Claims) chứa Email và Quyền (Role) để nạp vào Session/Cookie
+            // Tạo danh sách Claims lưu Email và Vai trò (Admin/User) vào Cookie xác thực
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.Email),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role ?? "User") // Cấp quyền tương ứng từ CSDL
+                new Claim(ClaimTypes.Role, user.Role ?? "User")
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
-            // Thiết lập Cookie phiên đăng nhập (Lưu thông tin đăng nhập vào trình duyệt)
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+            // Ghi Cookie phiên đăng nhập vào trình duyệt
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity));
 
-            // ĐIỀU HƯỚNG THÔNG MINH DỰA THEO PHÂN QUYỀN (ROLE)
+            // Điều hướng về trang quản trị nếu là Admin, ngược lại về Trang chủ
             if (user.Role == "Admin")
             {
-                // Nếu là Admin -> Đẩy thẳng vào trang Quản trị Tài khoản
-                return RedirectToAction("Index", "AdminAccounts");
+                return RedirectToAction("Index", "AdminDashboard");
             }
 
-            // Nếu là User bình thường -> Đẩy ra trang chủ mua sắm
             return RedirectToAction("Index", "Home");
         }
 
-
+     
         // 3. CHỨC NĂNG ĐĂNG XUẤT (LOGOUT)
-        
-        [HttpPost] // Cập nhật thành HttpPost để khớp với form Đăng xuất bên file _Layout.cshtml
+       
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            // Hủy Cookie, xóa phiên đăng nhập hiện tại
+            // Hủy Cookie đăng nhập và xóa Session giỏ hàng hiện tại
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-            // Xóa luôn giỏ hàng trong Session (nếu cần, để người khác dùng máy không thấy giỏ hàng cũ)
             HttpContext.Session.Clear();
 
-            // Đẩy về trang chủ
             return RedirectToAction("Index", "Home");
         }
     }
