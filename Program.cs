@@ -86,7 +86,7 @@ using (var scope = app.Services.CreateScope())
         var admin = new User
         {
             FullName = "Quản Trị Viên",
-            Email = "admin@ultrapokemon.vn",
+            Email = "admin@ultrapokemon..vn",
             Role = "Admin",
             IsApproved = true
         };
@@ -95,7 +95,7 @@ using (var scope = app.Services.CreateScope())
         var staff = new User
         {
             FullName = "Nhân Viên Kho",
-            Email = "staff@ultrapokemon.vn",
+            Email = "staff@ultrapokemon..vn",
             Role = "Staff",
             IsApproved = true
         };
@@ -104,7 +104,7 @@ using (var scope = app.Services.CreateScope())
         var customer = new User
         {
             FullName = "Satoshi Ketchum",
-            Email = "customer@ultrapokemon.vn",
+            Email = "customer@ultrapokemon..vn",
             Role = "Customer",
             IsApproved = true
         };

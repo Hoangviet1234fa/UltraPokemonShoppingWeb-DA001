@@ -1,4 +1,6 @@
 
+-- HỆ THỐNG CƠ SỞ DỮ LIỆU: ULTRAPOKÉMON CARD STORE (ASP.NET CORE MVC)
+
 
 -- 1. TẠO CƠ SỞ DỮ LIỆU
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = N'UltraPokemonDB')
@@ -18,12 +20,9 @@ IF OBJECT_ID(N'dbo.Categories', N'U') IS NOT NULL DROP TABLE dbo.Categories;
 IF OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL DROP TABLE dbo.Users;
 GO
 
-
 -- 3. ĐỊNH NGHĨA CẤU TRÚC CÁC BẢNG (TABLE SCHEMAS & CONSTRAINTS)
 
-
 -- BẢNG 1: CATEGORIES (HỆ POKÉMON / DANH MỤC THẺ BÀI)
--- Đồng bộ với Models/Category.cs (Id, Name, Description)
 CREATE TABLE dbo.Categories (
     Id INT IDENTITY(1,1) NOT NULL,
     Name NVARCHAR(50) NOT NULL,
@@ -34,7 +33,6 @@ CREATE TABLE dbo.Categories (
 GO
 
 -- BẢNG 2: USERS (TÀI KHOẢN NGƯỜI DÙNG & PHÂN QUYỀN HỆ THỐNG)
--- Đồng bộ với Models/User.cs (Id, FullName, Email, PasswordHash, Role, IsApproved, AvatarUrl)
 CREATE TABLE dbo.Users (
     Id INT IDENTITY(1,1) NOT NULL,
     FullName NVARCHAR(100) NOT NULL DEFAULT N'Thành viên UltraPokémon',
@@ -49,7 +47,6 @@ CREATE TABLE dbo.Users (
 GO
 
 -- BẢNG 3: PRODUCTS (DANH SÁCH THẺ BÀI POKÉMON, TỒN KHO & CHỈ SỐ)
--- Đồng bộ với Models/Product.cs
 CREATE TABLE dbo.Products (
     Id INT IDENTITY(1,1) NOT NULL,
     Name NVARCHAR(100) NOT NULL,
@@ -67,12 +64,7 @@ CREATE TABLE dbo.Products (
 GO
 
 -- BẢNG 4: ORDERS (HÓA ĐƠN ĐẶT HÀNG CỦA KHÁCH)
--- Quy ước trạng thái đơn hàng (Enum OrderStatus):
---   0 = Pending   (Chờ duyệt)
---   1 = Shipping  (Đang giao hàng)
---   2 = Completed (Hoàn thành)
---   3 = Cancelled (Đã hủy - Tự động hoàn trả tồn kho)
--- Đồng bộ với Models/Order.cs (bao gồm cả cột Note)
+-- Quy ước Status: 0 = Pending, 1 = Shipping, 2 = Completed, 3 = Cancelled
 CREATE TABLE dbo.Orders (
     Id INT IDENTITY(1001,1) NOT NULL,           -- Mã đơn bắt đầu từ 1001 (#ULTRA001001)
     UserEmail NVARCHAR(150) NOT NULL,           -- Email tài khoản đặt mua
@@ -91,7 +83,6 @@ CREATE TABLE dbo.Orders (
 GO
 
 -- BẢNG 5: ORDERDETAILS (CHI TIẾT TỪNG LÁ BÀI TRONG HÓA ĐƠN)
--- Đồng bộ với Models/OrderDetail.cs
 CREATE TABLE dbo.OrderDetails (
     Id INT IDENTITY(1,1) NOT NULL,
     OrderId INT NOT NULL,
@@ -106,16 +97,13 @@ CREATE TABLE dbo.OrderDetails (
 );
 GO
 
-
 -- 4. TẠO CÁC CHỈ MỤC (INDEXES) TỐI ƯU TỐC ĐỘ TÌM KIẾM & JOIN
-
 CREATE NONCLUSTERED INDEX IX_Products_ElementType ON dbo.Products(ElementType);
 CREATE NONCLUSTERED INDEX IX_Orders_UserEmail ON dbo.Orders(UserEmail);
 CREATE NONCLUSTERED INDEX IX_Orders_OrderDate ON dbo.Orders(OrderDate DESC);
 CREATE NONCLUSTERED INDEX IX_OrderDetails_OrderId ON dbo.OrderDetails(OrderId);
 CREATE NONCLUSTERED INDEX IX_OrderDetails_ProductId ON dbo.OrderDetails(ProductId);
 GO
-
 
 -- 5. NẠP TOÀN BỘ DỮ LIỆU MẪU (FULL SEED DATA)
 
@@ -132,14 +120,13 @@ SET IDENTITY_INSERT dbo.Categories OFF;
 GO
 
 -- 5.2 Tài khoản mẫu phân quyền (Admin, Staff, Customer)
--- Mật khẩu mặc định cho tất cả tài khoản bên dưới đều là: 123456
--- (Chuỗi hash chuẩn ASP.NET Core Identity PasswordHasher<User> V3)
+-- Mật khẩu mặc định: 123456 (tự động đồng bộ hash chuẩn khi khởi chạy ứng dụng C#)
 SET IDENTITY_INSERT dbo.Users ON;
 INSERT INTO dbo.Users (Id, FullName, Email, PasswordHash, Role, IsApproved, AvatarUrl) VALUES
-(1, N'Quản Trị Viên',  N'admin@ultrapokemon.vn',    N'AQAAAAIAAYagAAAAEKh7xQ4zV1p5L9n3wR8tY2uI6oP0aS4dF7gH1jK5lZ9xC3vB7nM1qW5eR9tY2uI==', N'Admin',    1, NULL),
-(2, N'Nhân Viên Kho',  N'staff@ultrapokemon.vn',    N'AQAAAAIAAYagAAAAEKh7xQ4zV1p5L9n3wR8tY2uI6oP0aS4dF7gH1jK5lZ9xC3vB7nM1qW5eR9tY2uI==', N'Staff',    1, NULL),
-(3, N'Nguyễn Văn Huấn', N'user@ultrapokemon.com',   N'AQAAAAIAAYagAAAAEKh7xQ4zV1p5L9n3wR8tY2uI6oP0aS4dF7gH1jK5lZ9xC3vB7nM1qW5eR9tY2uI==', N'Customer', 1, NULL),
-(4, N'Satoshi Ketchum', N'trainer.ash@gmail.com',   N'AQAAAAIAAYagAAAAEKh7xQ4zV1p5L9n3wR8tY2uI6oP0aS4dF7gH1jK5lZ9xC3vB7nM1qW5eR9tY2uI==', N'Customer', 1, NULL);
+(1, N'Quản Trị Viên',   N'admin@ultrapokemon.vn', N'SEED_SYNC_123456', N'Admin',    1, NULL),
+(2, N'Nhân Viên Kho',   N'staff@ultrapokemon.vn', N'SEED_SYNC_123456', N'Staff',    1, NULL),
+(3, N'Nguyễn Văn Huấn', N'user@ultrapokemon.com', N'SEED_SYNC_123456', N'Customer', 1, NULL),
+(4, N'Satoshi Ketchum', N'trainer.ash@gmail.com', N'SEED_SYNC_123456', N'Customer', 1, NULL);
 SET IDENTITY_INSERT dbo.Users OFF;
 GO
 
@@ -164,34 +151,28 @@ GO
 -- 5.4 Đơn hàng mẫu (Phủ đủ 4 hình thức thanh toán & 4 trạng thái để test Admin)
 SET IDENTITY_INSERT dbo.Orders ON;
 INSERT INTO dbo.Orders (Id, UserEmail, OrderDate, TotalAmount, Status, FullName, Address, PhoneNumber, PaymentMethod, Note) VALUES
-(1001, N'user@ultrapokemon.com',  '2026-11-04 14:30:00', 600000.00, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
-(1002, N'trainer.ash@gmail.com',  '2026-11-04 16:45:00', 520000.00, 1, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
-(1003, N'user@ultrapokemon.com',  '2026-11-05 09:15:00', 190000.00, 2, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Ví Momo', NULL),
-(1004, N'trainer.ash@gmail.com',  '2026-11-06 10:20:00', 165000.00, 3, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
+(1001, N'user@ultrapokemon.com', '2026-11-04 14:30:00', 600000.00, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
+(1002, N'trainer.ash@gmail.com', '2026-11-04 16:45:00', 520000.00, 1, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
+(1003, N'user@ultrapokemon.com', '2026-11-05 09:15:00', 190000.00, 2, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Ví Momo', NULL),
+(1004, N'trainer.ash@gmail.com', '2026-11-06 10:20:00', 165000.00, 3, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
 SET IDENTITY_INSERT dbo.Orders OFF;
 GO
 
 -- 5.5 Chi tiết sản phẩm từng đơn hàng
 SET IDENTITY_INSERT dbo.OrderDetails ON;
 INSERT INTO dbo.OrderDetails (Id, OrderId, ProductId, Quantity, UnitPrice) VALUES
--- Chi tiết Đơn 1001 (Tổng: 600.000đ)
-(1, 1001, 1, 1, 450000.00),  -- 1x Charizard
-(2, 1001, 6, 1, 150000.00),  -- 1x Pikachu
--- Chi tiết Đơn 1002 (Tổng: 520.000đ)
-(3, 1002, 2, 1, 400000.00),  -- 1x Blastoise
-(4, 1002, 3, 1, 120000.00),  -- 1x Raichu
--- Chi tiết Đơn 1003 (Tổng: 190.000đ)
-(5, 1003, 4, 1, 90000.00),   -- 1x Jolteon
-(6, 1003, 7, 2, 50000.00),   -- 2x Vulpix
--- Chi tiết Đơn 1004 (Tổng: 165.000đ)
-(7, 1004, 9,  1, 80000.00),  -- 1x Charmander
-(8, 1004, 10, 1, 85000.00);  -- 1x Squirtle
+(1, 1001, 1, 1, 450000.00),
+(2, 1001, 6, 1, 150000.00),
+(3, 1002, 2, 1, 400000.00),
+(4, 1002, 3, 1, 120000.00),
+(5, 1003, 4, 1, 90000.00),
+(6, 1003, 7, 2, 50000.00),
+(7, 1004, 9,  1, 80000.00),
+(8, 1004, 10, 1, 85000.00);
 SET IDENTITY_INSERT dbo.OrderDetails OFF;
 GO
 
-
 -- 6. TRUY VẤN KIỂM TRA NHANH KẾT QUẢ TẠO DỮ LIỆU
-
 SELECT 'Categories'   AS [TableName], COUNT(*) AS [TotalRows] FROM dbo.Categories
 UNION ALL
 SELECT 'Users'        AS [TableName], COUNT(*) AS [TotalRows] FROM dbo.Users

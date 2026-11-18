@@ -1,9 +1,9 @@
 ﻿@using System.Text.Json
 
 @{
-    // =========================================================================
+    
     // 1. ĐỌC DỮ LIỆU GIỎ HÀNG TỪ SESSION & TÍNH TỔNG SỐ LƯỢNG LÁ BÀI HIỆN CÓ
-    // =========================================================================
+   
     int cartCount = 0;
 
     foreach (var key in Context.Session.Keys)
@@ -222,9 +222,7 @@
             @RenderBody()
         </main>
 
-        <!-- =================================================================
-             4. KHỐI THÔNG TIN CỬA HÀNG & LIÊN HỆ TRỰC TIẾP (ĐẦY ĐỦ NỘI DUNG)
-             ================================================================= -->
+        <!-- 4. KHỐI THÔNG TIN CỬA HÀNG & LIÊN HỆ TRỰC TIẾP (ĐẦY ĐỦ NỘI DUNG) -->
         <section id="aboutShopSection" class="container mb-4 mt-2">
             <div class="glass-bar text-light border rounded-3 p-4 p-lg-5 shadow-lg">
                 <div class="row g-4 g-lg-5 align-items-start">
@@ -293,7 +291,7 @@
                                     <i class="bi bi-envelope text-warning mt-1"></i>
                                     <div>
                                         <div class="text-secondary">Email chăm sóc khách hàng</div>
-                                        <div class="text-light font-mono-stat">cskh@ultrapokemon.vn</div>
+                                        <div class="text-light font-mono-stat">cskh@ultrapokemon..vn</div>
                                     </div>
                                 </li>
                                 <li class="d-flex align-items-start gap-3">
@@ -345,9 +343,7 @@
 
     @await RenderSectionAsync("Scripts", required: false)
 
-    <!-- =====================================================================
-         CSS NỘI BỘ CHO THANH ĐIỀU HƯỚNG (NAVBAR)
-         ===================================================================== -->
+    <!--  CSS NỘI BỘ CHO THANH ĐIỀU HƯỚNG (NAVBAR) -->
     <style>
             .up-header {
                 background: rgba(11, 17, 32, 0.88);
