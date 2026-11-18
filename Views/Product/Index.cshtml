@@ -2,9 +2,11 @@
 @using UltraPokemon.Models
 @using UltraPokemon.Helpers
 @inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment _env
+
 @{
     ViewData["Title"] = "Danh sách thẻ bài Pokémon";
 
+    // Lấy các tham số tìm kiếm, lọc và phân trang từ ViewBag do ProductController truyền sang
     string searchString = ViewBag.CurrentFilter ?? string.Empty;
     string selectedElement = ViewBag.CurrentElement ?? string.Empty;
     string sortOrder = ViewBag.CurrentSort ?? string.Empty;
@@ -13,21 +15,29 @@
     int totalItems = ViewBag.TotalItems ?? Model.Count();
     int currentPage = ViewBag.CurrentPage ?? 1;
     int totalPages = ViewBag.TotalPages ?? 1;
+
+    // Kiểm tra quyền Admin để hiển thị các nút quản trị kho thẻ
     bool isAdmin = User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin");
 
+    // Kiểm tra xem người dùng có đang áp dụng điều kiện tìm kiếm/lọc nào không
     bool hasActiveFilter = !string.IsNullOrWhiteSpace(searchString)
                         || !string.IsNullOrWhiteSpace(selectedElement)
                         || !string.IsNullOrWhiteSpace(sortOrder);
 }
 
-<div class="container py-3">
-    <!-- 1. KHỐI TIÊU ĐỀ & BỘ LỌC TÌM KIẾM -->
-    <div class="bg-white rounded-4 shadow-sm p-4 mb-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-3 mb-3 border-bottom">
+<div class="py-2">
+
+    <!-- =====================================================================
+         1. KHỐI TIÊU ĐỀ, CÔNG CỤ ADMIN & BỘ LỌC TÌM KIẾM ĐA ĐIỀU KIỆN
+         ===================================================================== -->
+    <section class="bg-white rounded-3 border p-4 mb-4">
+
+        <!-- Hàng tiêu đề & các nút thao tác nhanh (Xóa lọc / Quản trị) -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 mb-3 border-bottom">
             <div>
-                <h3 class="fw-bold text-dark mb-1">Danh Sách Thẻ Bài Pokémon</h3>
+                <h3 class="fw-bold text-dark mb-1" style="letter-spacing: -0.02em;">Danh Sách Thẻ Bài Pokémon</h3>
                 <p class="text-muted small mb-0">
-                    Tìm thấy <strong class="text-primary">@totalItems</strong> thẻ bài phù hợp
+                    Tìm thấy <strong class="font-mono-stat text-dark">@totalItems</strong> thẻ bài phù hợp
                     @if (!string.IsNullOrWhiteSpace(searchString))
                     {
                         <span>cho từ khóa "<strong>@searchString</strong>"</span>
@@ -35,12 +45,12 @@
                 </p>
             </div>
 
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
                 @if (hasActiveFilter)
                 {
                     <a asp-controller="Product" asp-action="Index"
-                       class="btn btn-sm btn-outline-danger fw-semibold px-3 rounded-3 d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-x-circle"></i>
+                       class="btn btn-sm btn-outline-danger fw-medium px-3 rounded-2 d-inline-flex align-items-center gap-1.5">
+                        <i class="bi bi-x-lg"></i>
                         <span>Xóa bộ lọc</span>
                     </a>
                 }
@@ -48,25 +58,28 @@
                 @if (isAdmin)
                 {
                     <a asp-controller="Categories" asp-action="Index"
-                       class="btn btn-sm btn-outline-primary fw-semibold px-3 rounded-3 d-inline-flex align-items-center gap-1">
+                       class="btn btn-sm btn-outline-dark fw-medium px-3 rounded-2 d-inline-flex align-items-center gap-1.5">
                         <i class="bi bi-tags"></i>
                         <span>Quản lý Hệ</span>
                     </a>
                     <a asp-controller="Product" asp-action="Create"
-                       class="btn btn-sm btn-success fw-semibold px-3 rounded-3 d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-plus-circle"></i>
+                       class="btn btn-sm btn-dark fw-medium px-3 rounded-2 d-inline-flex align-items-center gap-1.5">
+                        <i class="bi bi-plus-lg"></i>
                         <span>Thêm thẻ bài mới</span>
                     </a>
                 }
             </div>
         </div>
 
+        @* Thông báo ghi chú tìm kiếm (nếu Controller có truyền qua ViewBag.SearchNote) *@
         @if (ViewBag.SearchNote != null)
         {
-            <div class="alert alert-info py-2 small mb-3">@ViewBag.SearchNote</div>
+            <div class="alert alert-light border text-dark py-2 px-3 small rounded-2 mb-3">
+                @ViewBag.SearchNote
+            </div>
         }
 
-        <!-- Form Tìm kiếm & Sắp xếp -->
+        <!-- Form Tìm kiếm theo tên & Sắp xếp (giữ nguyên tham số elementType đang chọn) -->
         <form asp-controller="Product" asp-action="Index" method="get" class="row g-2 align-items-center mb-3">
             @if (!string.IsNullOrWhiteSpace(selectedElement))
             {
@@ -75,17 +88,19 @@
 
             <div class="col-lg-6">
                 <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0 text-muted">
+                    <span class="input-group-text bg-light border-end-0 text-secondary rounded-start-2">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="search" name="searchString" value="@searchString"
-                           class="form-control border-start-0 ps-1"
+                    <input type="search"
+                           name="searchString"
+                           value="@searchString"
+                           class="form-control border-start-0 ps-1 shadow-none rounded-end-2"
                            placeholder="Nhập tên lá bài (ví dụ: Charizard, Pikachu)..." />
                 </div>
             </div>
 
             <div class="col-sm-8 col-lg-4">
-                <select name="sortOrder" class="form-select" onchange="this.form.submit()">
+                <select name="sortOrder" class="form-select shadow-none rounded-2" onchange="this.form.submit()">
                     <option value="" selected="@(string.IsNullOrEmpty(sortOrder))">Sắp xếp mặc định (A &rarr; Z)</option>
                     <option value="price_asc" selected="@(sortOrder == "price_asc")">Giá: Thấp đến Cao</option>
                     <option value="price_desc" selected="@(sortOrder == "price_desc")">Giá: Cao đến Thấp</option>
@@ -96,21 +111,21 @@
             </div>
 
             <div class="col-sm-4 col-lg-2">
-                <button type="submit" class="btn btn-primary fw-semibold w-100 d-inline-flex align-items-center justify-content-center gap-1">
+                <button type="submit" class="btn btn-dark fw-medium w-100 rounded-2 d-inline-flex align-items-center justify-content-center gap-1.5">
                     <i class="bi bi-search"></i>
                     <span>Tìm kiếm</span>
                 </button>
             </div>
         </form>
 
-        <!-- Dải nút lọc nhanh theo Hệ nguyên tố -->
-        <div class="d-flex flex-wrap align-items-center gap-2 pt-2 border-top">
-            <span class="text-muted small fw-semibold me-1">Lọc theo Hệ:</span>
+        <!-- Dải thẻ lọc nhanh theo Hệ nguyên tố (giữ nguyên từ khóa tìm kiếm & kiểu sắp xếp) -->
+        <div class="d-flex flex-wrap align-items-center gap-2 pt-3 border-top">
+            <span class="text-secondary small fw-semibold me-1">Lọc theo Hệ:</span>
 
             <a asp-controller="Product" asp-action="Index"
                asp-route-searchString="@searchString"
                asp-route-sortOrder="@sortOrder"
-               class="tcg-filter-pill @(string.IsNullOrEmpty(selectedElement) ? "active" : "")">
+               class="tcg-filter-tab @(string.IsNullOrEmpty(selectedElement) ? "active" : "")">
                 Tất cả
             </a>
 
@@ -121,56 +136,74 @@
                    asp-route-elementType="@el"
                    asp-route-searchString="@searchString"
                    asp-route-sortOrder="@sortOrder"
-                   class="tcg-filter-pill @(isActive ? "active" : "")">
+                   class="tcg-filter-tab @(isActive ? "active" : "")">
                     @el
                 </a>
             }
         </div>
-    </div>
+    </section>
 
-    <!-- 2. LƯỚI HIỂN THỊ DANH SÁCH THẺ BÀI -->
+    <!-- =====================================================================
+         2. LƯỚI HIỂN THỊ DANH SÁCH THẺ BÀI
+         ===================================================================== -->
     @if (!Model.Any())
     {
-        <div class="bg-white rounded-4 shadow-sm p-5 text-center">
-            <div class="text-muted mb-2"><i class="bi bi-search fs-1"></i></div>
+        <!-- Trạng thái rỗng khi không có sản phẩm khớp bộ lọc -->
+        <section class="bg-white rounded-3 border p-5 text-center">
+            <div class="text-secondary mb-2">
+                <i class="bi bi-search fs-2"></i>
+            </div>
             <h5 class="fw-bold text-dark mb-1">Không tìm thấy thẻ bài nào</h5>
             <p class="text-muted small mb-3">Thử tìm với tên Pokémon khác hoặc xóa bớt điều kiện lọc hiện tại.</p>
-            <a asp-controller="Product" asp-action="Index" class="btn btn-primary fw-semibold px-4">
+            <a asp-controller="Product" asp-action="Index" class="btn btn-dark btn-sm fw-medium px-4 py-2 rounded-2">
                 Xem tất cả thẻ bài
             </a>
-        </div>
+        </section>
     }
     else
     {
-        <div class="row g-4">
+        <div class="row g-3 g-lg-4">
             @foreach (var item in Model)
             {
                 bool inStock = item.Stock > 0;
+                // Lấy đường dẫn ảnh cục bộ qua ImageHelper kèm ảnh dự phòng khi thiếu file
                 string cardImg = ImageHelper.Resolve(_env, item);
 
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden tcg-product-card">
-                        <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
-                           class="tcg-img-stage text-decoration-none position-relative">
-                            <img src="@cardImg"
-                                 onerror="this.onerror=null;this.src=this.dataset.fallback;"
-                                 data-fallback="@ImageHelper.Placeholder(item)"
-                                 alt="@item.Name" class="tcg-card-photo" loading="lazy" />
+                    <!-- Gắn class card-sparkle từ site.css để kích hoạt hiệu ứng quét sáng holographic -->
+                    <div class="card card-sparkle h-100">
 
-                            <span class="badge @(inStock ? "bg-dark bg-opacity-75" : "bg-danger") position-absolute top-0 end-0 m-2 px-2 py-1">
-                                @(inStock ? $"Còn {item.Stock}" : "Hết hàng")
+                        <!-- Thanh thông số trên cùng: Tách nhãn Hệ, HP và Tồn kho khỏi ảnh lá bài -->
+                        <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
+                            <span class="badge bg-light text-secondary border fw-medium rounded-1 px-2 py-1" style="font-size: 0.72rem;">
+                                Hệ @(string.IsNullOrWhiteSpace(item.ElementType) ? "Phổ thông" : item.ElementType)
                             </span>
-                        </a>
 
-                        <div class="card-body d-flex flex-column p-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size: 0.72rem;">
-                                    Hệ @(string.IsNullOrWhiteSpace(item.ElementType) ? "Phổ thông" : item.ElementType)
+                            <div class="d-flex align-items-center gap-2 font-mono-stat" style="font-size: 0.74rem;">
+                                <span class="text-muted fw-semibold">HP @item.Power</span>
+                                <span class="text-muted opacity-50">|</span>
+                                <span class="fw-semibold @(inStock ? "text-success" : "text-danger")">
+                                    @(inStock ? $"Còn {item.Stock}" : "Hết hàng")
                                 </span>
-                                <span class="small text-muted fw-semibold">⚡ @item.Power</span>
                             </div>
+                        </div>
 
-                            <h6 class="fw-bold text-dark mb-2 text-truncate" title="@item.Name">
+                        <!-- Khung trưng bày ảnh lá bài -->
+                        <div class="px-3">
+                            <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
+                               class="tcg-img-stage rounded-2 text-decoration-none">
+                                <img src="@cardImg"
+                                     onerror="this.onerror=null;this.src=this.dataset.fallback;"
+                                     data-fallback="@ImageHelper.Placeholder(item)"
+                                     alt="@item.Name"
+                                     class="tcg-card-photo"
+                                     loading="lazy" />
+                            </a>
+                        </div>
+
+                        <!-- Phần thông tin tên, giá bán và cụm nút thao tác -->
+                        <div class="card-body d-flex flex-column p-3">
+                            <h6 class="fw-bold text-dark mb-3 text-truncate" title="@item.Name">
                                 <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
                                    class="text-dark text-decoration-none">
                                     @item.Name
@@ -178,66 +211,72 @@
                             </h6>
 
                             <div class="mt-auto pt-2 border-top">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                <!-- Hàng giá bán -->
+                                <div class="d-flex justify-content-between align-items-baseline mb-2.5">
                                     <span class="text-muted small">Giá bán:</span>
-                                    <span class="fw-bold text-danger fs-5" style="font-variant-numeric: tabular-nums;">
+                                    <span class="font-mono-stat fw-bold text-dark fs-6">
                                         @item.Price.ToString("N0")đ
                                     </span>
                                 </div>
 
+                                <!-- Hàng nút bấm dành cho khách hàng -->
                                 <div class="d-flex gap-2">
                                     <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
-                                       class="btn btn-outline-secondary btn-sm fw-semibold flex-grow-1">
+                                       class="btn btn-outline-secondary btn-sm fw-medium px-2.5 rounded-2 text-nowrap">
                                         Xem chi tiết
                                     </a>
 
                                     @if (inStock)
                                     {
+                                        <!-- Giữ nguyên tham số id và returnUrl để quay lại đúng trang/bộ lọc hiện tại -->
                                         <form asp-controller="Cart" asp-action="Add" method="post" class="flex-grow-1 m-0">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
                                             <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-                                            <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100 d-inline-flex align-items-center justify-content-center gap-1">
-                                                <i class="bi bi-bag-plus"></i>
-                                                <span>Thêm vào giỏ hàng </span>
+                                            <button type="submit" class="btn btn-dark btn-sm fw-medium w-100 rounded-2 text-nowrap">
+                                                Thêm vào giỏ hàng
                                             </button>
                                         </form>
                                     }
                                     else
                                     {
-                                        <button type="button" class="btn btn-secondary btn-sm flex-grow-1" disabled>
+                                        <button type="button" class="btn btn-light text-muted border btn-sm flex-grow-1 rounded-2" disabled>
                                             Tạm hết
                                         </button>
                                     }
                                 </div>
 
+                                @* Cụm nút Sửa / Xóa chỉ hiển thị khi đăng nhập bằng tài khoản Admin *@
                                 @if (isAdmin)
                                 {
                                     <div class="d-flex gap-2 mt-2 pt-2 border-top">
                                         <a asp-controller="Product" asp-action="Edit" asp-route-id="@item.Id"
-                                           class="btn btn-outline-warning text-dark btn-sm fw-semibold flex-grow-1">
+                                           class="btn btn-outline-dark btn-sm fw-medium flex-grow-1 rounded-2">
                                             <i class="bi bi-pencil-square me-1"></i>Sửa
                                         </a>
                                         <a asp-controller="Product" asp-action="Delete" asp-route-id="@item.Id"
-                                           class="btn btn-outline-danger btn-sm fw-semibold flex-grow-1">
+                                           class="btn btn-outline-danger btn-sm fw-medium flex-grow-1 rounded-2">
                                             <i class="bi bi-trash3 me-1"></i>Xóa
                                         </a>
                                     </div>
                                 }
                             </div>
                         </div>
+
                     </div>
                 </div>
             }
         </div>
 
-        <!-- 3. THANH PHÂN TRANG -->
+        <!-- =================================================================
+             3. THANH PHÂN TRANG (GIỮ NGUYÊN ĐIỀU KIỆN LỌC & SẮP XẾP)
+             ================================================================= -->
         @if (totalPages > 1)
         {
             <nav aria-label="Phân trang thẻ bài" class="mt-4">
-                <ul class="pagination justify-content-center">
+                <ul class="pagination justify-content-center gap-1 tcg-pagination">
                     <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
-                        <a class="page-link" asp-action="Index"
+                        <a class="page-link rounded-2" asp-action="Index"
                            asp-route-page="@(currentPage - 1)"
                            asp-route-searchString="@searchString"
                            asp-route-elementType="@selectedElement"
@@ -249,7 +288,7 @@
                     @for (int i = 1; i <= totalPages; i++)
                     {
                         <li class="page-item @(i == currentPage ? "active" : "")">
-                            <a class="page-link" asp-action="Index"
+                            <a class="page-link font-mono-stat rounded-2" asp-action="Index"
                                asp-route-page="@i"
                                asp-route-searchString="@searchString"
                                asp-route-elementType="@selectedElement"
@@ -260,7 +299,7 @@
                     }
 
                     <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
-                        <a class="page-link" asp-action="Index"
+                        <a class="page-link rounded-2" asp-action="Index"
                            asp-route-page="@(currentPage + 1)"
                            asp-route-searchString="@searchString"
                            asp-route-elementType="@selectedElement"
@@ -274,43 +313,40 @@
     }
 </div>
 
+<!-- =========================================================================
+     CSS RIÊNG CHO TRANG DANH SÁCH THẺ BÀI
+     ========================================================================= -->
 <style>
-    .tcg-filter-pill {
+    /* Thẻ lọc theo hệ nguyên tố dáng vuông vức gọn gàng */
+    .tcg-filter-tab {
         display: inline-block;
-        padding: 5px 14px;
-        border-radius: 999px;
+        padding: 5px 13px;
+        border-radius: 6px;
         font-size: 0.82rem;
-        font-weight: 600;
+        font-weight: 500;
         text-decoration: none;
-        background-color: #f1f5f9;
+        background-color: #f8fafc;
         color: #475569;
         border: 1px solid #e2e8f0;
-        transition: all 0.15s ease;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
 
-        .tcg-filter-pill:hover {
-            background-color: #e2e8f0;
+        .tcg-filter-tab:hover {
+            background-color: #ffffff;
             color: #0f172a;
+            border-color: #94a3b8;
         }
 
-        .tcg-filter-pill.active {
+        .tcg-filter-tab.active {
             background-color: #0f172a;
             color: #ffffff;
             border-color: #0f172a;
         }
 
-    .tcg-product-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-        .tcg-product-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14) !important;
-        }
-
+    /* Khung trưng bày ảnh lá bài */
     .tcg-img-stage {
-        height: 245px;
-        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        height: 235px;
+        background-color: #f8fafc;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -322,12 +358,37 @@
         max-height: 100%;
         max-width: 100%;
         object-fit: contain;
-        border-radius: 8px;
-        transition: transform 0.25s ease;
-        filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.14));
+        border-radius: 4px;
+        transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    .tcg-product-card:hover .tcg-card-photo {
-        transform: scale(1.05);
+    .card-sparkle:hover .tcg-card-photo {
+        transform: scale(1.035);
+    }
+
+    /* Tùy chỉnh thanh phân trang đồng bộ tông màu trầm */
+    .tcg-pagination .page-link {
+        color: #0f172a;
+        border-color: #e2e8f0;
+        background-color: #ffffff;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+    }
+
+        .tcg-pagination .page-link:hover {
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+
+    .tcg-pagination .page-item.active .page-link {
+        background-color: #0f172a;
+        border-color: #0f172a;
+        color: #ffffff;
+    }
+
+    .tcg-pagination .page-item.disabled .page-link {
+        background-color: rgba(255, 255, 255, 0.85);
+        color: #94a3b8;
     }
 </style>

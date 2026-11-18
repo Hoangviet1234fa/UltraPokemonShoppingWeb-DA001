@@ -1,347 +1,414 @@
 @model IEnumerable<UltraPokemon.Models.Product>
 @using UltraPokemon.Helpers
 @inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment _env
+
 @{
     ViewData["Title"] = "Trang chủ";
+    // Danh sách từ khóa tìm kiếm nhanh hiển thị dưới thanh tìm kiếm chính
     var popularTags = new[] { "Charizard", "Pikachu", "Blastoise", "Raichu", "Jolteon", "Vulpix" };
 }
 
-<div class="container py-3">
-    <!-- 1. HERO BANNER -->
-    <div class="up-hero rounded-4 p-4 p-lg-5 mb-4 text-white shadow-sm">
-        <div class="row align-items-center g-4">
-            <div class="col-lg-7">
-                <span class="badge bg-warning text-dark fw-bold px-3 py-2 rounded-pill mb-3" style="font-size: 0.72rem; letter-spacing: 0.4px;">
-                    <i class="bi bi-lightning-charge-fill me-1"></i> BỘ SƯU TẬP POKÉMON TCG 2026
-                </span>
+<div class="py-2">
 
-                <h1 class="display-6 fw-bold mb-3" style="line-height: 1.2;">
+    <!-- 1. HERO BANNER: KHU VỰC GIỚI THIỆU, TÌM KIẾM & THÔNG SỐ KHO THẺ
+         Thiết kế nền tối chiều sâu kết hợp viền mảnh, không dùng gradient neon gắt -->
+    <section class="up-hero rounded-3 p-4 p-lg-5 mb-4 text-light border">
+        <div class="row align-items-center g-4 g-lg-5">
+
+            <!-- Cột trái: Tiêu đề chính, thanh tìm kiếm và từ khóa phổ biến -->
+            <div class="col-lg-7">
+                <div class="d-inline-flex align-items-center gap-2 px-2.5 py-1 rounded-2 mb-3 up-eyebrow">
+                    <i class="bi bi-lightning-charge-fill text-warning"></i>
+                    <span>BỘ SƯU TẬP POKÉMON TCG 2026</span>
+                </div>
+
+                <h1 class="display-6 fw-bold mb-3 text-white" style="letter-spacing: -0.02em; line-height: 1.22;">
                     Sàn giao dịch &amp; Sưu tầm <span class="text-warning">Thẻ bài Pokémon</span> Chính Hãng
                 </h1>
 
-                <p class="text-light opacity-75 mb-4" style="font-size: 0.95rem;">
+                <p class="text-light text-opacity-75 mb-4" style="font-size: 0.95rem; line-height: 1.65; max-width: 560px;">
                     Khám phá hàng trăm mẫu thẻ bài hiếm từ cơ bản đến huyền thoại. Mỗi đơn hàng đều được kiểm định chất lượng và tặng kèm phụ kiện bảo vệ chống cong gãy.
                 </p>
 
-                <!-- Thanh tìm kiếm trong Hero -->
-                <form asp-controller="Product" asp-action="Index" method="get" class="bg-white p-1 rounded-3 shadow-sm d-flex align-items-center mb-3" style="max-width: 540px;">
-                    <span class="ps-3 pe-2 text-muted"><i class="bi bi-search"></i></span>
-                    <input type="search" name="searchString" class="form-control border-0 shadow-none"
+                <!-- Form tìm kiếm trực tiếp gửi sang ProductController/Index -->
+                <form asp-controller="Product" asp-action="Index" method="get"
+                      class="up-search-bar p-1 rounded-2 d-flex align-items-center mb-3" style="max-width: 540px;">
+                    <span class="ps-3 pe-2 text-secondary">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="search"
+                           name="searchString"
+                           class="form-control border-0 shadow-none bg-transparent text-dark"
                            placeholder="Nhập tên thẻ bài bạn đang tìm (VD: Charizard, Pikachu)..." />
-                    <button type="submit" class="btn btn-primary fw-semibold px-4 text-nowrap rounded-2">
+                    <button type="submit" class="btn btn-dark fw-semibold px-4 text-nowrap rounded-2">
                         Tìm kiếm
                     </button>
                 </form>
 
-                <!-- Từ khóa phổ biến -->
+                <!-- Danh sách từ khóa phổ biến -->
                 <div class="d-flex flex-wrap align-items-center gap-2 small">
-                    <span class="text-light opacity-75">Phổ biến:</span>
+                    <span class="text-secondary me-1">Phổ biến:</span>
                     @foreach (var tag in popularTags)
                     {
                         <a asp-controller="Product" asp-action="Index" asp-route-searchString="@tag"
-                           class="badge rounded-pill text-decoration-none fw-normal px-3 py-2 up-popular-tag">
+                           class="text-decoration-none px-2.5 py-1 rounded-2 up-popular-tag">
                             @tag
                         </a>
                     }
                 </div>
             </div>
 
-            <!-- Khối ULTRA POKEMON VAULT -->
+            <!-- Cột phải: Bảng thông số ULTRA POKEMON VAULT -->
             <div class="col-lg-5">
-                <div class="up-vault-box rounded-4 p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="up-vault-box rounded-3 p-4">
+                    <div class="d-flex justify-content-between align-items-start pb-3 mb-3 border-bottom border-secondary border-opacity-25">
                         <div>
-                            <div class="text-warning fw-bold small text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                            <div class="text-warning fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.08em;">
                                 ULTRA POKEMON VAULT
                             </div>
                             <h5 class="fw-bold text-white mb-0">Kho thẻ bài sẵn sàng giao</h5>
                         </div>
-                        <span class="up-vault-icon rounded-3 d-inline-flex align-items-center justify-content-center">
-                            <i class="bi bi-layers-fill text-warning fs-5"></i>
+                        <span class="up-vault-icon rounded-2 d-inline-flex align-items-center justify-content-center">
+                            <i class="bi bi-layers text-warning fs-5"></i>
                         </span>
                     </div>
 
+                    <!-- 3 ô chỉ số vận hành (dùng font-mono-stat để số liệu thẳng hàng) -->
                     <div class="row g-2 text-center mb-3">
                         <div class="col-4">
-                            <div class="up-vault-stat rounded-3 py-2 px-1">
-                                <div class="fw-bold text-warning fs-5">100%</div>
-                                <div class="text-light opacity-75" style="font-size: 0.72rem;">Chính hãng</div>
+                            <div class="up-vault-stat rounded-2 py-2.5 px-2">
+                                <div class="font-mono-stat fw-bold text-warning fs-5">100%</div>
+                                <div class="text-secondary" style="font-size: 0.75rem;">Chính hãng</div>
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="up-vault-stat rounded-3 py-2 px-1">
-                                <div class="fw-bold text-info fs-5">4 Cổng</div>
-                                <div class="text-light opacity-75" style="font-size: 0.72rem;">Thanh toán</div>
+                            <div class="up-vault-stat rounded-2 py-2.5 px-2">
+                                <div class="font-mono-stat fw-bold text-white fs-5">4 Cổng</div>
+                                <div class="text-secondary" style="font-size: 0.75rem;">Thanh toán</div>
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="up-vault-stat rounded-3 py-2 px-1">
-                                <div class="fw-bold fs-5" style="color: #4ade80;">24/7</div>
-                                <div class="text-light opacity-75" style="font-size: 0.72rem;">Giao hỏa tốc</div>
+                            <div class="up-vault-stat rounded-2 py-2.5 px-2">
+                                <div class="font-mono-stat fw-bold text-white fs-5">24/7</div>
+                                <div class="text-secondary" style="font-size: 0.75rem;">Giao hỏa tốc</div>
                             </div>
                         </div>
                     </div>
 
-                    <a asp-controller="Product" asp-action="Index" class="btn btn-warning w-100 fw-bold text-dark py-2 rounded-3">
+                    <a asp-controller="Product" asp-action="Index" class="btn btn-warning w-100 fw-semibold text-dark py-2 rounded-2">
                         Xem toàn bộ kho thẻ bài &rarr;
                     </a>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- 2. THANH TRA CỨU THEO HỆ NGUYÊN TỐ -->
-    <div class="bg-white rounded-4 shadow-sm p-3 px-4 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        </div>
+    </section>
+
+    <!--   2. THANH TRA CỨU NHANH THEO HỆ NGUYÊN TỐ
+         Thiết kế dạng thẻ lọc kỹ thuật gọn gàng, dùng chấm màu nhận diện hệ -->
+    <section class="bg-white rounded-3 border p-3 px-4 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-funnel text-muted fs-5"></i>
-            <span class="fw-bold text-secondary small text-uppercase" style="letter-spacing: 0.4px;">TRA CỨU THEO HỆ:</span>
+            <i class="bi bi-sliders2 text-secondary"></i>
+            <span class="fw-bold text-secondary small text-uppercase" style="letter-spacing: 0.06em;">
+                TRA CỨU THEO HỆ:
+            </span>
         </div>
 
         <div class="d-flex flex-wrap gap-2">
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Fire" class="up-element-pill el-fire">
-                <i class="bi bi-fire"></i> Hệ Lửa (Fire)
+            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Fire" class="up-element-tab">
+                <span class="up-dot dot-fire"></span> Hệ Lửa (Fire)
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Electric" class="up-element-pill el-electric">
-                <i class="bi bi-lightning-fill"></i> Hệ Điện (Electric)
+            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Electric" class="up-element-tab">
+                <span class="up-dot dot-electric"></span> Hệ Điện (Electric)
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Water" class="up-element-pill el-water">
-                <i class="bi bi-droplet-fill"></i> Hệ Nước (Water)
+            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Water" class="up-element-tab">
+                <span class="up-dot dot-water"></span> Hệ Nước (Water)
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Grass" class="up-element-pill el-grass">
-                <i class="bi bi-flower1"></i> Hệ Cỏ (Grass)
+            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Grass" class="up-element-tab">
+                <span class="up-dot dot-grass"></span> Hệ Cỏ (Grass)
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Rock" class="up-element-pill el-psychic">
-                <i class="bi bi-gem"></i> Hệ Đá (Rock)
+            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Rock" class="up-element-tab">
+                <span class="up-dot dot-rock"></span> Hệ Đá (Rock)
             </a>
-            <a asp-controller="Product" asp-action="Index" class="up-element-pill el-all">
-                Tất cả thẻ <i class="bi bi-chevron-right"></i>
+            <a asp-controller="Product" asp-action="Index" class="up-element-tab up-element-all">
+                Tất cả thẻ <i class="bi bi-arrow-right-short"></i>
             </a>
         </div>
-    </div>
+    </section>
 
-    <!-- 3. KHUNG THẺ BÀI NỔI BẬT -->
-    <div class="bg-white rounded-4 shadow-sm p-4 mb-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-            <div class="d-flex align-items-center gap-3">
-                <div class="rounded-3 bg-warning-subtle text-warning d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
-                    <i class="bi bi-fire fs-5"></i>
-                </div>
-                <div>
-                    <h4 class="fw-bold text-dark mb-0">Thẻ bài nổi bật</h4>
-                    <p class="text-muted small mb-0">Những lá bài được các nhà sưu tầm săn đón nhiều nhất</p>
-                </div>
+    <!--  3. DANH MỤC THẺ BÀI NỔI BẬT (HIỂN THỊ TỐI ĐA 8 THẺ TỪ MODEL)-->
+    <section class="bg-white rounded-3 border p-4 mb-4">
+        <!-- Tiêu đề khu vực -->
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 pb-3 mb-4 border-bottom">
+            <div>
+                <h4 class="fw-bold text-dark mb-1" style="letter-spacing: -0.01em;">Thẻ bài nổi bật</h4>
+                <p class="text-muted small mb-0">Những lá bài được các nhà sưu tầm săn đón nhiều nhất</p>
             </div>
-            <a asp-controller="Product" asp-action="Index" class="btn btn-outline-primary btn-sm fw-semibold px-3 rounded-3">
+            <a asp-controller="Product" asp-action="Index" class="btn btn-outline-dark btn-sm fw-semibold px-3 rounded-2">
                 Xem tất cả thẻ bài &rarr;
             </a>
         </div>
 
         @if (Model != null && Model.Any())
         {
-            <div class="row g-4">
+            <div class="row g-3 g-lg-4">
                 @foreach (var item in Model.Take(8))
                 {
                     bool inStock = item.Stock > 0;
+                    // Giữ nguyên hàm xử lý đường dẫn ảnh cục bộ và ảnh dự phòng từ ImageHelper
                     string cardImg = ImageHelper.Resolve(_env, item);
 
                     <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <div class="card h-100 border border-light-subtle rounded-4 overflow-hidden up-card">
-                            <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
-                               class="d-flex align-items-center justify-content-center p-3 position-relative text-decoration-none"
-                               style="height: 245px; background: #f8fafc;">
-                                <img src="@cardImg"
-                                     onerror="this.onerror=null;this.src=this.dataset.fallback;"
-                                     data-fallback="@ImageHelper.Placeholder(item)"
-                                     alt="@item.Name"
-                                     style="max-height: 100%; max-width: 100%; object-fit: contain; border-radius: 6px;" />
-                                <span class="badge @(inStock ? "bg-dark" : "bg-danger") position-absolute top-0 end-0 m-2 px-2 py-1" style="font-size: 0.72rem;">
+                        <!-- Gắn class card-sparkle từ site.css để kích hoạt hiệu ứng quét sáng holographic -->
+                        <div class="card card-sparkle h-100">
+
+                            <!-- Thanh thông số trên cùng: Tách nhãn Hệ và Tồn kho khỏi ảnh thẻ bài -->
+                            <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
+                                <span class="badge bg-light text-secondary border fw-medium rounded-1 px-2 py-1" style="font-size: 0.72rem;">
+                                    Hệ @item.ElementType
+                                </span>
+                                <span class="font-mono-stat fw-semibold @(inStock ? "text-success" : "text-danger")" style="font-size: 0.75rem;">
                                     @(inStock ? $"Còn {item.Stock}" : "Hết hàng")
                                 </span>
-                            </a>
+                            </div>
 
+                            <!-- Khung hiển thị hình ảnh lá bài -->
+                            <div class="px-3">
+                                <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
+                                   class="d-flex align-items-center justify-content-center p-3 rounded-2 text-decoration-none"
+                                   style="height: 235px; background: #f8fafc;">
+                                    <img src="@cardImg"
+                                         onerror="this.onerror=null;this.src=this.dataset.fallback;"
+                                         data-fallback="@ImageHelper.Placeholder(item)"
+                                         alt="@item.Name"
+                                         style="max-height: 100%; max-width: 100%; object-fit: contain; border-radius: 4px;" />
+                                </a>
+                            </div>
+
+                            <!-- Nội dung tên thẻ, giá bán và nút thao tác -->
                             <div class="card-body d-flex flex-column p-3">
-                                <div class="mb-2">
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size: 0.72rem;">
-                                        Hệ @item.ElementType
-                                    </span>
-                                </div>
-
-                                <h6 class="fw-bold text-dark mb-3 text-truncate" title="@item.Name">@item.Name</h6>
+                                <h6 class="fw-bold text-dark mb-3 text-truncate" title="@item.Name">
+                                    <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none text-dark">
+                                        @item.Name
+                                    </a>
+                                </h6>
 
                                 <div class="mt-auto pt-2 border-top">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <!-- Hàng giá bán -->
+                                    <div class="d-flex justify-content-between align-items-baseline mb-2.5">
                                         <span class="text-muted small">Giá bán</span>
-                                        <span class="fw-bold text-danger fs-5" style="font-variant-numeric: tabular-nums;">
+                                        <span class="font-mono-stat fw-bold text-dark fs-6">
                                             @item.Price.ToString("N0")₫
                                         </span>
                                     </div>
 
+                                    <!-- Hàng nút bấm: Xem chi tiết & Thêm vào giỏ hàng -->
                                     <div class="d-flex gap-2">
                                         <a asp-controller="Product" asp-action="Details" asp-route-id="@item.Id"
-                                           class="btn btn-outline-secondary btn-sm fw-semibold px-2 text-nowrap">
+                                           class="btn btn-outline-secondary btn-sm fw-medium px-2.5 rounded-2 text-nowrap">
                                             Xem chi tiết
                                         </a>
 
                                         @if (inStock)
                                         {
+                                            <!-- Giữ nguyên tham số name="id" và name="returnUrl" để khớp CartController.Add -->
                                             <form asp-controller="Cart" asp-action="Add" method="post" class="flex-grow-1 m-0">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@item.Id" />
                                                 <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
-                                                <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100 text-nowrap">
-                                                    <i class="bi bi-cart-plus me-1"></i>Thêm vào giỏ hàng
+                                                <button type="submit" class="btn btn-dark btn-sm fw-medium w-100 rounded-2 text-nowrap">
+                                                    Thêm vào giỏ hàng
                                                 </button>
                                             </form>
                                         }
                                         else
                                         {
-                                            <button type="button" class="btn btn-secondary btn-sm flex-grow-1" disabled>Hết hàng</button>
+                                            <button type="button" class="btn btn-light text-muted border btn-sm flex-grow-1 rounded-2" disabled>
+                                                Hết hàng
+                                            </button>
                                         }
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 }
             </div>
         }
-    </div>
+    </section>
 
-    <!-- 4. 3 THẺ CAM KẾT DỊCH VỤ PHÍA DƯỚI -->
-    <div class="row g-3">
-        <div class="col-md-4">
-            <div class="bg-white rounded-4 shadow-sm p-3 px-4 h-100 d-flex align-items-start gap-3">
-                <div class="rounded-3 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
-                    <i class="bi bi-patch-check-fill fs-5"></i>
+    <!--  4. DẢI CAM KẾT DỊCH VỤ (GỘP 3 CỘT LIỀN MẠCH CÓ ĐƯỜNG NGĂN CÁCH)-->
+    <section class="bg-white rounded-3 border overflow-hidden">
+        <div class="row g-0">
+            <!-- Cam kết 1 -->
+            <div class="col-md-4 p-4 border-bottom border-md-bottom-0 border-md-end">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="bi bi-patch-check text-dark fs-4 mt-0.5"></i>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">Thẻ bài chính hãng 100%</h6>
+                        <p class="text-muted small mb-0" style="line-height: 1.6;">
+                            Cam kết nguồn gốc rõ ràng, tình trạng thẻ (Near Mint / Mint) được kiểm tra kỹ trước khi xuất kho.
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h6 class="fw-bold text-dark mb-1">Thẻ bài chính hãng 100%</h6>
-                    <p class="text-muted small mb-0">
-                        Cam kết nguồn gốc rõ ràng, tình trạng thẻ (Near Mint / Mint) được kiểm tra kỹ trước khi xuất kho.
-                    </p>
+            </div>
+
+            <!-- Cam kết 2 -->
+            <div class="col-md-4 p-4 border-bottom border-md-bottom-0 border-md-end">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="bi bi-shield-check text-dark fs-4 mt-0.5"></i>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">Đóng gói chống sốc 3 lớp</h6>
+                        <p class="text-muted small mb-0" style="line-height: 1.6;">
+                            Mỗi lá bài đều được bọc sẵn Sleeve mềm, kẹp Toploader cứng và hộp carton chống ẩm.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cam kết 3 -->
+            <div class="col-md-4 p-4">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="bi bi-credit-card text-dark fs-4 mt-0.5"></i>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">Thanh toán đa cổng an toàn</h6>
+                        <p class="text-muted small mb-0" style="line-height: 1.6;">
+                            Hỗ trợ thanh toán COD đồng kiểm, quét mã VietQR Ví MoMo, thẻ ATM Napas và Visa 3D-Secure.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
+    </section>
 
-        <div class="col-md-4">
-            <div class="bg-white rounded-4 shadow-sm p-3 px-4 h-100 d-flex align-items-start gap-3">
-                <div class="rounded-3 bg-warning-subtle text-warning d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
-                    <i class="bi bi-shield-lock-fill fs-5"></i>
-                </div>
-                <div>
-                    <h6 class="fw-bold text-dark mb-1">Đóng gói chống sốc 3 lớp</h6>
-                    <p class="text-muted small mb-0">
-                        Mỗi lá bài đều được bọc sẵn Sleeve mềm, kẹp Toploader cứng và hộp carton chống ẩm.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="bg-white rounded-4 shadow-sm p-3 px-4 h-100 d-flex align-items-start gap-3">
-                <div class="rounded-3 bg-success-subtle text-success d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
-                    <i class="bi bi-credit-card-2-front-fill fs-5"></i>
-                </div>
-                <div>
-                    <h6 class="fw-bold text-dark mb-1">Thanh toán đa cổng an toàn</h6>
-                    <p class="text-muted small mb-0">
-                        Hỗ trợ thanh toán COD đồng kiểm, quét mã VietQR Ví MoMo, thẻ ATM Napas và Visa 3D-Secure.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
+<!--   CSS RIÊNG CHO TRANG CHỦ (ĐỒNG BỘ VỚI HỆ MÀU TRONG SITE.CSS)  -->
 <style>
+    /* Nền Hero tông trầm sang trọng, kết hợp họa tiết lưới kỹ thuật mờ */
     .up-hero {
-        background: linear-gradient(125deg, #0f172a 0%, #1e3a8a 58%, #1d4ed8 100%);
+        background-color: #0f172a;
+        background-image: radial-gradient(circle at 85% 20%, rgba(234, 179, 8, 0.12), transparent 45%), linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 100% 100%, 28px 28px, 28px 28px;
+        border-color: rgba(255, 255, 255, 0.12) !important;
     }
 
-    .up-popular-tag {
-        background-color: rgba(255, 255, 255, 0.14);
-        color: #ffffff;
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        transition: background-color 0.15s ease;
-    }
-
-        .up-popular-tag:hover {
-            background-color: rgba(255, 255, 255, 0.28);
-            color: #ffffff;
-        }
-
-    .up-vault-box {
-        background: rgba(15, 23, 42, 0.55);
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        backdrop-filter: blur(8px);
-    }
-
-    .up-vault-icon {
-        width: 40px;
-        height: 40px;
-        background: rgba(250, 204, 21, 0.16);
-        border: 1px solid rgba(250, 204, 21, 0.35);
-    }
-
-    .up-vault-stat {
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-    }
-
-    .up-element-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 14px;
-        border-radius: 999px;
-        font-size: 0.82rem;
+    .up-eyebrow {
+        background: rgba(234, 179, 8, 0.12);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+        color: #facc15;
+        font-size: 0.72rem;
         font-weight: 600;
-        text-decoration: none;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        letter-spacing: 0.06em;
     }
 
-        .up-element-pill:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-        }
-
-    .el-fire {
-        background-color: #fee2e2;
-        color: #b91c1c;
-    }
-
-    .el-electric {
-        background-color: #fef3c7;
-        color: #b45309;
-    }
-
-    .el-water {
-        background-color: #dbeafe;
-        color: #1d4ed8;
-    }
-
-    .el-grass {
-        background-color: #dcfce7;
-        color: #15803d;
-    }
-
-    .el-psychic {
-        background-color: #f3e8ff;
-        color: #6d28d9;
-    }
-
-    .el-all {
-        background-color: #f1f5f9;
-        color: #0f172a;
+    .up-search-bar {
+        background: #ffffff;
         border: 1px solid #cbd5e1;
     }
 
-    .up-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    .up-popular-tag {
+        background-color: rgba(255, 255, 255, 0.07);
+        color: #e2e8f0;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        transition: all 0.15s ease;
     }
 
-        .up-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12) !important;
+        .up-popular-tag:hover {
+            background-color: rgba(234, 179, 8, 0.16);
+            border-color: rgba(234, 179, 8, 0.45);
+            color: #ffffff;
         }
+
+    /* Khối thông số Vault bên phải Hero */
+    .up-vault-box {
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .up-vault-icon {
+        width: 38px;
+        height: 38px;
+        background: rgba(234, 179, 8, 0.12);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .up-vault-stat {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Nút lọc theo hệ nguyên tố dạng thẻ vuông vức */
+    .up-element-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #1e293b;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        text-decoration: none;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+        .up-element-tab:hover {
+            background-color: #ffffff;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+
+    .up-element-all {
+        background-color: #0f172a;
+        border-color: #0f172a;
+        color: #ffffff;
+    }
+
+        .up-element-all:hover {
+            background-color: #1e293b;
+            border-color: #1e293b;
+            color: #ffffff;
+        }
+
+    /* Chấm tròn nhỏ nhận diện màu của từng hệ nguyên tố */
+    .up-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .dot-fire {
+        background-color: #dc2626;
+    }
+
+    .dot-electric {
+        background-color: #eab308;
+    }
+
+    .dot-water {
+        background-color: #2563eb;
+    }
+
+    .dot-grass {
+        background-color: #16a34a;
+    }
+
+    .dot-rock {
+        background-color: #78716c;
+    }
+
+    /* Đường kẻ dọc ngăn cách 3 cột cam kết trên màn hình máy tính */
+    @@media (min-width: 768px) {
+        .border-md-end {
+            border-right: 1px solid #dee2e6 !important;
+        }
+
+        .border-md-bottom-0 {
+            border-bottom: 0 !important;
+        }
+    }
 </style>
