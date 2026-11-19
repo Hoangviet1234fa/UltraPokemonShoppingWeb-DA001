@@ -69,12 +69,17 @@ namespace UltraPokemon.Controllers
         // 2. CHỨC NĂNG ĐĂNG NHẬP (LOGIN)
 
         [HttpGet]
-        public IActionResult Login() => View();
+        public IActionResult Login(string? returnUrl = null)
+        {
+            ViewBag.ReturnUrl = returnUrl;
+            return View();
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
+            ViewBag.ReturnUrl = returnUrl;
             if (!ModelState.IsValid) return View(model);
 
             // Tìm tài khoản theo Email trong CSDL
@@ -114,6 +119,12 @@ namespace UltraPokemon.Controllers
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity));
+
+            // Nếu có returnUrl hợp lệ (ví dụ /Cart/Checkout) thì quay lại đúng trang đó
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
 
             // Điều hướng về trang quản trị nếu là Admin, ngược lại về Trang chủ
             if (user.Role == "Admin")

@@ -1,7 +1,6 @@
 ﻿@model UltraPokemon.Models.LoginViewModel
 @{
     ViewData["Title"] = "Đăng nhập";
-    var returnUrl = ViewBag.ReturnUrl as string;
 }
 
 <div class="auth-page-wrapper py-4 py-md-5">
@@ -65,7 +64,14 @@
                     </a>
                 </div>
 
-                <!-- Hiển thị thông báo lỗi từ Controller (hỗ trợ cả ViewBag.Error và ModelState) -->
+                <!-- Hiển thị thông báo lỗi từ Controller / TempData (khi chuyển hướng từ Thanh toán sang) -->
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger border-0 bg-danger-subtle text-danger small d-flex align-items-center gap-2 py-2 rounded-3 mb-3">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        <div>@TempData["Error"]</div>
+                    </div>
+                }
                 @if (ViewBag.Error != null)
                 {
                     <div class="alert alert-danger border-0 bg-danger-subtle text-danger small d-flex align-items-center gap-2 py-2 rounded-3 mb-3">
@@ -78,7 +84,7 @@
                 <!-- Form Đăng nhập -->
                 <form asp-controller="Account" asp-action="Login" method="post">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
 
                     <!-- Trường Email / Tên đăng nhập -->
                     <div class="mb-3">

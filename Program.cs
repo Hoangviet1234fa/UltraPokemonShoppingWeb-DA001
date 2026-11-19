@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using UltraPokemon.Data;
 using UltraPokemon.Models;
-
+using Microsoft.AspNetCore.HttpOverrides;
 
 // 1. KHỞI TẠO BUILDER & ĐĂNG KÝ CÁC DỊCH VỤ (DEPENDENCY INJECTION CONTAINER)
 
@@ -35,6 +35,14 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
+// Nhận diện đúng Host & HTTPS khi chạy qua Dev Tunnels / Reverse Proxy
+var forwardedOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+};
+forwardedOptions.KnownNetworks.Clear();
+forwardedOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedOptions);
 
 // 2. TỰ ĐỘNG KHỞI TẠO DATABASE & NẠP DỮ LIỆU MẪU (SEED DATA) KHI CHẠY LẦN ĐẦU
 
@@ -86,7 +94,7 @@ using (var scope = app.Services.CreateScope())
         var admin = new User
         {
             FullName = "Quản Trị Viên",
-            // [ĐÃ FIX] Sửa lỗi 2 dấu chấm "..vn" thành ".vn" để vượt qua validation email khi đăng nhập
+           
             Email = "admin@ultrapokemon.vn",
             Role = "Admin",
             IsApproved = true
@@ -96,7 +104,7 @@ using (var scope = app.Services.CreateScope())
         var staff = new User
         {
             FullName = "Nhân Viên Kho",
-            // [ĐÃ FIX] Sửa lỗi 2 dấu chấm "..vn" thành ".vn"
+            
             Email = "staff@ultrapokemon.vn",
             Role = "Staff",
             IsApproved = true
@@ -106,7 +114,7 @@ using (var scope = app.Services.CreateScope())
         var customer = new User
         {
             FullName = "Satoshi Ketchum",
-            // [ĐÃ FIX] Sửa lỗi 2 dấu chấm "..vn" thành ".vn"
+          
             Email = "customer@ultrapokemon.vn",
             Role = "Customer",
             IsApproved = true

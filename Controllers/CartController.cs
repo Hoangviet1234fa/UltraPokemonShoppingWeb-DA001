@@ -14,9 +14,9 @@ public class CartController : Controller
 
     public CartController(AppDbContext db) => _db = db;
 
-    // 
+    
     // 1. QUẢN LÝ GIỎ HÀNG (XEM, THÊM, CẬP NHẬT SỐ LƯỢNG, XÓA, LÀM RỖNG)
-    // 
+    
     public async Task<IActionResult> Index()
     {
         // Nếu khách quay lại giỏ hàng từ cổng thanh toán mà chưa xác nhận trả tiền -> hoàn đơn nháp & giữ nguyên giỏ
@@ -103,13 +103,19 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    //
+    
     // 2. THANH TOÁN (CHECKOUT) & TẠO ĐƠN HÀNG (TRANSACTION)
-    // 
+    
     [HttpGet]
-    [Authorize]
     public async Task<IActionResult> Checkout()
     {
+        // Bắt buộc người dùng đăng nhập khi bấm nút Tiến hành thanh toán
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            TempData["Error"] = "Vui lòng đăng nhập tài khoản để tiến hành xác nhận thanh toán!";
+            return RedirectToAction("Login", "Account", new { returnUrl = Url.Action(nameof(Checkout), "Cart") });
+        }
+
         // Nếu khách bấm Back từ trang QR MoMo/ATM quay về Checkout -> hoàn đơn nháp & giữ nguyên giỏ hàng
         await RollbackAbandonedOnlineOrderAsync();
 
@@ -126,16 +132,26 @@ public class CartController : Controller
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize]
     public async Task<IActionResult> Checkout(CheckoutViewModel model)
     {
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            TempData["Error"] = "Vui lòng đăng nhập tài khoản để tiến hành xác nhận thanh toán!";
+            return RedirectToAction("Login", "Account", new { returnUrl = Url.Action(nameof(Checkout), "Cart") });
+        }
+
         return await ExecuteCheckoutAsync(model);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    [Authorize]
     public async Task<IActionResult> ProcessCheckout(CheckoutViewModel model)
     {
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            TempData["Error"] = "Vui lòng đăng nhập tài khoản để tiến hành xác nhận thanh toán!";
+            return RedirectToAction("Login", "Account", new { returnUrl = Url.Action(nameof(Checkout), "Cart") });
+        }
+
         return await ExecuteCheckoutAsync(model);
     }
 
@@ -237,9 +253,9 @@ public class CartController : Controller
         }
     }
 
-    // 
+    
     // 3. CÁC CỔNG THANH TOÁN TRỰC TUYẾN (MOMO & ATM / VISA)
-    // 
+    
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> MomoPayment(int orderId)
@@ -291,9 +307,9 @@ public class CartController : Controller
         return RedirectToAction(nameof(MyOrders));
     }
 
-    
+
     // 4. LỊCH SỬ ĐƠN HÀNG & HỦY ĐƠN CHỜ DUYỆT (HOÀN KHO)
-    
+
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> MyOrders()
@@ -367,7 +383,7 @@ public class CartController : Controller
         return RedirectToAction(nameof(MyOrders));
     }
 
- 
+
     // CÁC HÀM HỖ TRỢ NỘI BỘ (ROLLBACK ĐƠN NHÁP & TÍNH TỔNG GIỎ HÀNG)
 
     // Tự động hoàn kho & xóa đơn nháp nếu khách bỏ dở thanh toán online để quay lại giỏ hàng
