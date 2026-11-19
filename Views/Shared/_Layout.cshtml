@@ -60,21 +60,19 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100" style="background-color: #cbd5e1 !important; background-image: none !important; color: #0f172a;">
 
-    <!-- 1. VIDEO NỀN CỐ ĐỊNH -->
-    <div class="video-background-container">
-        <video autoplay muted loop playsinline class="bg-video">
-            <source src="~/videos/183279-870457579.mp4" type="video/mp4" />
-        </video>
-        <div class="video-overlay"></div>
+    <!-- 1. LỚP NỀN XÁM GHI KẾT HỢP HIỆU ỨNG VŨ TRỤ TINH TẾ -->
+    <div class="up-cosmos-bg" aria-hidden="true">
+        <div class="up-stars-layer up-stars-sm"></div>
+        <div class="up-stars-layer up-stars-md"></div>
     </div>
 
-    <!-- 2. ÁNH SÁNG THEO CON TRỎ CHUỘT -->
-    <div id="mouseGlow" class="mouse-glow d-none d-md-block"></div>
+    <!-- 2. ÁNH SÁNG THEO CON TRỎ CHUỘT (DÙNG CLASS .mouse-glow TRONG SITE.CSS) -->
+    <div id="mouseGlow" class="mouse-glow d-none d-md-block" aria-hidden="true"></div>
 
     <!-- 3. KHUNG NỘI DUNG CHÍNH -->
-    <div class="main-content-wrapper d-flex flex-column min-vh-100">
+    <div class="main-content-wrapper d-flex flex-column min-vh-100" style="position: relative; z-index: 1;">
 
         <!-- THANH ĐIỀU HƯỚNG (NAVBAR) -->
         <header class="sticky-top up-header">
@@ -157,7 +155,6 @@
                         </ul>
 
                         <!-- Thanh tìm kiếm nhanh trên header -->
-                        <!--  Đổi name="searchString" thành name="search" để khớp với ProductController.Index -->
                         <form asp-controller="Product" asp-action="Index" method="get"
                               class="up-nav-search d-none d-xl-flex align-items-center me-3">
                             <i class="bi bi-search up-search-icon"></i>
@@ -188,7 +185,6 @@
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark up-dropdown shadow-lg">
                                         <li>
-                                            <!--  Trỏ đúng sang CartController/MyOrders thay vì OrderController không tồn tại -->
                                             <a class="dropdown-item" asp-controller="Cart" asp-action="MyOrders">
                                                 <i class="bi bi-box-seam me-2 text-secondary"></i>Đơn hàng của tôi
                                             </a>
@@ -219,7 +215,7 @@
 
         <!-- NỘI DUNG TỪNG TRANG -->
         <main role="main" class="container my-4 flex-grow-1">
-            @*  Hiển thị thông báo phản hồi chung (TempData) từ các Controller *@
+            @* Hiển thị thông báo phản hồi chung (TempData) từ các Controller *@
             @if (TempData["Success"] != null)
             {
                 <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm" role="alert">
@@ -245,9 +241,9 @@
             @RenderBody()
         </main>
 
-        <!-- 4. KHỐI THÔNG TIN CỬA HÀNG & LIÊN HỆ TRỰC TIẾP (ĐẦY ĐỦ NỘI DUNG) -->
+        <!-- 4. KHỐI THÔNG TIN CỬA HÀNG & LIÊN HỆ TRỰC TIẾP -->
         <section id="aboutShopSection" class="container mb-4 mt-2">
-            <div class="glass-bar text-light border rounded-3 p-4 p-lg-5 shadow-lg">
+            <div class="text-light border rounded-3 p-4 p-lg-5 shadow-sm" style="background-color: #0f172a;">
                 <div class="row g-4 g-lg-5 align-items-start">
 
                     <!-- Cột trái: Giới thiệu cửa hàng & Quy chuẩn bảo quản -->
@@ -258,7 +254,7 @@
                         <h4 class="fw-bold mb-3">UltraPokémon Card Store — Chuyên trang sưu tầm thẻ bài Pokémon TCG</h4>
 
                         <p class="text-light text-opacity-75 small mb-3" style="line-height: 1.7;">
-                            UltraPokémon là hệ thống phân phối và giao dịch thẻ bài Pokémon TCG nguyên bản , phục vụ người chơi thi đấu lẫn giới sưu tầm. Danh mục sản phẩm bao gồm đầy đủ các dòng thẻ thuộc 6 hệ nguyên tố (Fire, Water, Electric, Rock, Grass, Psychic) từ phiên bản cơ bản đến các lá bài hiếm như GX, V, VMAX và Secret Rare.
+                            UltraPokémon là hệ thống phân phối và giao dịch thẻ bài Pokémon TCG nguyên bản, phục vụ người chơi thi đấu lẫn giới sưu tầm. Danh mục sản phẩm bao gồm đầy đủ các dòng thẻ thuộc 6 hệ nguyên tố (Fire, Water, Electric, Rock, Grass, Psychic) từ phiên bản cơ bản đến các lá bài hiếm như GX, V, VMAX và Secret Rare.
                         </p>
 
                         <p class="text-light text-opacity-75 small mb-4" style="line-height: 1.7;">
@@ -337,7 +333,7 @@
         </section>
 
         <!-- 5. FOOTER -->
-        <footer class="footer glass-bar text-secondary py-3 mt-auto border-top">
+        <footer class="footer text-secondary py-3 mt-auto border-top border-secondary border-opacity-25" style="background-color: #0b1120;">
             <div class="container d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
                 <div>
                     <span class="text-light fw-semibold">UltraPokémon Card Store</span> &mdash; Hệ thống phân phối thẻ bài Pokémon TCG chính hãng
@@ -366,14 +362,68 @@
 
     @await RenderSectionAsync("Scripts", required: false)
 
-    <!-- CSS NỘI BỘ CHO THANH ĐIỀU HƯỚNG (NAVBAR) -->
+    <!-- CSS NỘI BỘ CHO NỀN VŨ TRỤ XÁM GHI & THANH ĐIỀU HƯỚNG -->
     <style>
+            /* Nền xám ghi #cbd5e1 kết hợp ánh tinh vân mờ hai bên */
+            .up-cosmos-bg {
+                position: fixed;
+                inset: 0;
+                z-index: 0;
+                pointer-events: none;
+                overflow: hidden;
+                background: radial-gradient(circle at 10% 22%, rgba(255, 255, 255, 0.5) 0%, transparent 32%), radial-gradient(circle at 90% 25%, rgba(250, 204, 21, 0.14) 0%, transparent 28%), radial-gradient(circle at 86% 78%, rgba(100, 116, 139, 0.22) 0%, transparent 36%), radial-gradient(circle at 14% 80%, rgba(148, 163, 184, 0.35) 0%, transparent 35%), #cbd5e1;
+            }
+
+            .up-stars-layer {
+                position: absolute;
+                inset: -60px;
+                background-repeat: repeat;
+            }
+
+            /* Lớp sao nhỏ lấp lánh nhẹ */
+            .up-stars-sm {
+                background-image: radial-gradient(1.5px 1.5px at 24px 36px, rgba(255, 255, 255, 0.95), transparent), radial-gradient(1.5px 1.5px at 96px 140px, rgba(71, 85, 105, 0.42), transparent), radial-gradient(1px 1px at 168px 64px, rgba(255, 255, 255, 0.85), transparent), radial-gradient(1.5px 1.5px at 210px 185px, rgba(100, 116, 139, 0.38), transparent);
+                background-size: 240px 240px;
+                animation: upCosmosTwinkle 7s ease-in-out infinite alternate;
+            }
+
+            /* Lớp sao trung bình & điểm sáng vàng/trắng tạo chiều sâu */
+            .up-stars-md {
+                background-image: radial-gradient(2px 2px at 55px 80px, rgba(255, 255, 255, 0.95), transparent), radial-gradient(2px 2px at 190px 45px, rgba(234, 179, 8, 0.45), transparent), radial-gradient(2px 2px at 280px 210px, rgba(71, 85, 105, 0.35), transparent), radial-gradient(2.5px 2.5px at 130px 260px, rgba(255, 255, 255, 0.85), transparent);
+                background-size: 340px 320px;
+                animation: upCosmosDrift 28s linear infinite;
+            }
+
+            @@keyframes upCosmosTwinkle {
+                0% {
+                    opacity: 0.55;
+                }
+
+                100% {
+                    opacity: 1;
+                }
+            }
+
+            @@keyframes upCosmosDrift {
+                0% {
+                    transform: translateY(0px);
+                }
+
+                50% {
+                    transform: translateY(-18px);
+                }
+
+                100% {
+                    transform: translateY(0px);
+                }
+            }
+
             .up-header {
-                background: rgba(11, 17, 32, 0.88);
+                background: rgba(11, 17, 32, 0.96);
                 backdrop-filter: blur(16px);
                 -webkit-backdrop-filter: blur(16px);
                 border-bottom: 1px solid rgba(255, 255, 255, 0.09);
-                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.28);
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
                 z-index: 1030;
             }
 
