@@ -82,7 +82,7 @@ namespace UltraPokemon.Models
 
        
         /// Thuộc tính chỉ dùng để hiển thị mã đơn đẹp (VD: #ULTRA000012).
-        /// [NotMapped] báo cho EF Core không tạo cột này trong bảng dữ liệu.
+        ///  báo cho EF Core không tạo cột này trong bảng dữ liệu.
     
         [NotMapped]
         public string OrderCode => $"#ULTRA{Id:D6}";
@@ -92,5 +92,6 @@ namespace UltraPokemon.Models
         /// Khởi tạo sẵn List rỗng để tránh lỗi NullReferenceException khi truy xuất.
        
         public List<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
+        public bool IsPaid { get; set; } = false;
     }
 }

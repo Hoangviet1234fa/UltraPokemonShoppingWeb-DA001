@@ -68,12 +68,14 @@ GO
 
 -- BẢNG 4: ORDERS (HÓA ĐƠN ĐẶT HÀNG CỦA KHÁCH)
 -- Quy ước Status: 0 = Pending, 1 = Shipping, 2 = Completed, 3 = Cancelled
+-- Quy ước IsPaid: 0 = Chưa thanh toán, 1 = Đã thanh toán
 CREATE TABLE dbo.Orders (
     Id INT IDENTITY(1001,1) NOT NULL,           -- Mã đơn bắt đầu từ 1001 (#ULTRA001001)
     UserEmail NVARCHAR(150) NOT NULL,           -- Email tài khoản đặt mua
     OrderDate DATETIME2 NOT NULL DEFAULT GETDATE(),
     TotalAmount DECIMAL(18,2) NOT NULL DEFAULT 0.00,
     Status INT NOT NULL DEFAULT 0,
+    IsPaid BIT NOT NULL DEFAULT 0,              -- [ĐÃ FIX] Trạng thái thanh toán (0 = Chưa thanh toán, 1 = Đã thanh toán)
     FullName NVARCHAR(100) NOT NULL,            -- Họ tên người nhận hàng
     Address NVARCHAR(250) NOT NULL,             -- Địa chỉ giao hàng chi tiết
     PhoneNumber NVARCHAR(15) NOT NULL,          -- Số điện thoại liên hệ
@@ -102,7 +104,7 @@ CREATE TABLE dbo.OrderDetails (
 );
 GO
 
--- 4. TẠO CÁC CHỈ MỤC (INDEXES) TỐI ƯU TỐC ĐỘ TÌM KIẾM & JOIN
+-- 4. TẠO CÁC CHỈ MỤC (INDEXES) TỐI ƯU TỐC ĐỘ TÌẾM KIẾM & JOIN
 CREATE NONCLUSTERED INDEX IX_Products_ElementType ON dbo.Products(ElementType);
 CREATE NONCLUSTERED INDEX IX_Orders_UserEmail ON dbo.Orders(UserEmail);
 CREATE NONCLUSTERED INDEX IX_Orders_OrderDate ON dbo.Orders(OrderDate DESC);
@@ -153,13 +155,13 @@ INSERT INTO dbo.Products (Id, Name, ElementType, Power, Price, Stock, Descriptio
 SET IDENTITY_INSERT dbo.Products OFF;
 GO
 
--- 5.4 Đơn hàng mẫu (Phủ đủ 4 hình thức thanh toán & 4 trạng thái để test Admin)
+-- 5.4 Đơn hàng mẫu (Phủ đủ 4 hình thức thanh toán, 4 trạng thái & trạng thái thanh toán IsPaid)
 SET IDENTITY_INSERT dbo.Orders ON;
-INSERT INTO dbo.Orders (Id, UserEmail, OrderDate, TotalAmount, Status, FullName, Address, PhoneNumber, PaymentMethod, Note) VALUES
-(1001, N'user@ultrapokemon.com', '2026-11-04 14:30:00', 600000.00, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
-(1002, N'trainer.ash@gmail.com', '2026-11-04 16:45:00', 520000.00, 1, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
-(1003, N'user@ultrapokemon.com', '2026-11-05 09:15:00', 190000.00, 2, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Ví Momo', NULL),
-(1004, N'trainer.ash@gmail.com', '2026-11-06 10:20:00', 165000.00, 3, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
+INSERT INTO dbo.Orders (Id, UserEmail, OrderDate, TotalAmount, Status, IsPaid, FullName, Address, PhoneNumber, PaymentMethod, Note) VALUES
+(1001, N'user@ultrapokemon.com', '2026-11-04 14:30:00', 600000.00, 0, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
+(1002, N'trainer.ash@gmail.com', '2026-11-04 16:45:00', 520000.00, 1, 1, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
+(1003, N'user@ultrapokemon.com', '2026-11-05 09:15:00', 190000.00, 2, 1, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Ví Momo', NULL),
+(1004, N'trainer.ash@gmail.com', '2026-11-06 10:20:00', 165000.00, 3, 0, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
 SET IDENTITY_INSERT dbo.Orders OFF;
 GO
 

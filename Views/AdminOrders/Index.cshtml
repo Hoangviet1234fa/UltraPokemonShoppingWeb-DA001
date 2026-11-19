@@ -118,7 +118,22 @@
                                 <div class="small text-muted">@order.OrderDate.ToString("HH:mm")</div>
                             </td>
                             <td>
-                                <span class="badge bg-light text-dark border">@order.PaymentMethod</span>
+                                @* Hiển thị phương thức thanh toán kèm trạng thái đã thu tiền (IsPaid) *@
+                                <div class="d-flex flex-column align-items-start gap-1">
+                                    <span class="badge bg-light text-dark border">@order.PaymentMethod</span>
+                                    @if (order.IsPaid)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                            <i class="bi bi-clock me-1"></i>Chưa thanh toán
+                                        </span>
+                                    }
+                                </div>
                             </td>
                             <td class="fw-bold text-danger">@order.TotalAmount.ToString("N0") đ</td>
                             <td>

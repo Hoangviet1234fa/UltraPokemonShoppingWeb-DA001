@@ -17,9 +17,9 @@ namespace UltraPokemon.Controllers
             _context = context;
         }
 
-        
+
         // 1. DANH SÁCH ĐƠN HÀNG (TÌM KIẾM + LỌC TRẠNG THÁI + PHÂN TRANG LINQ)
-    
+
         public async Task<IActionResult> Index(string? status, string? search, int page = 1)
         {
             // Nạp kèm OrderDetails để đếm số lượng thẻ trong từng đơn
@@ -71,9 +71,9 @@ namespace UltraPokemon.Controllers
             return View(orders);
         }
 
-      
+
         // 2. XEM CHI TIẾT ĐƠN HÀNG
-       
+
         public async Task<IActionResult> Details(int id)
         {
             var order = await _context.Orders
@@ -86,9 +86,9 @@ namespace UltraPokemon.Controllers
             return View(order);
         }
 
-        
+
         // 3. CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG (TỰ ĐỘNG HOÀN KHO KHI HỦY ĐƠN)
-        
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateStatus(int id, OrderStatus newStatus)
@@ -119,6 +119,7 @@ namespace UltraPokemon.Controllers
                 }
             }
 
+            if (newStatus == OrderStatus.Completed) order.IsPaid = true;
             order.Status = newStatus;
             await _context.SaveChangesAsync();
 

@@ -17,7 +17,9 @@ namespace UltraPokemon.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
+        // ============================================================
         // 1. DANH SÁCH THẺ BÀI (TÌM KIẾM + LỌC + SẮP XẾP + PHÂN TRANG)
+        // ============================================================
         public async Task<IActionResult> Index(string? search, string? element, decimal? minPrice, decimal? maxPrice, string? sortOrder, int page = 1)
         {
             var query = _context.Products.AsQueryable();
@@ -46,8 +48,7 @@ namespace UltraPokemon.Controllers
                 query = query.Where(p => p.Price <= maxPrice.Value);
             }
 
-            // 4. Sắp xếp
-            // [ĐÃ FIX] Bổ sung "name_desc" và "newest" khớp với dropdown trên View
+            // 4. Sắp xếp (khớp đầy đủ với các tùy chọn trên dropdown View)
             query = sortOrder switch
             {
                 "price_asc" => query.OrderBy(p => p.Price),
@@ -96,7 +97,9 @@ namespace UltraPokemon.Controllers
             return View(products);
         }
 
+        // ============================================================
         // 2. CHI TIẾT THẺ BÀI
+        // ============================================================
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -117,7 +120,9 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
+        // ============================================================
         // 3. THÊM THẺ BÀI MỚI (CHỈ ADMIN & STAFF)
+        // ============================================================
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Create()
         {
@@ -128,7 +133,7 @@ namespace UltraPokemon.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Staff")]
-        // [ĐÃ FIX] Bổ sung "ImageUrl" vào [Bind] và bỏ qua lỗi required nếu để trống ảnh (dùng ảnh mặc định hoặc file upload)
+        // Bổ sung "ImageUrl" vào [Bind] và bỏ qua lỗi required nếu để trống ảnh (dùng ảnh mặc định hoặc file upload)
         public async Task<IActionResult> Create([Bind("Name,ElementType,Power,Price,Stock,ImageUrl,Description")] Product product, IFormFile? imageFile, string? imageUrlInput)
         {
             ModelState.Remove("ImageUrl");
@@ -136,33 +141,47 @@ namespace UltraPokemon.Controllers
 
             if (ModelState.IsValid)
             {
-                // Ưu tiên lưu file ảnh upload từ máy tính
-                if (imageFile != null && imageFile.Length > 0)
+                try
                 {
-                    product.ImageUrl = await SaveImageAsync(imageFile);
-                }
-                // Nếu không upload file thì lấy link URL người dùng nhập
-                else if (!string.IsNullOrWhiteSpace(imageUrlInput))
-                {
-                    product.ImageUrl = imageUrlInput.Trim();
-                }
-                else if (!string.IsNullOrWhiteSpace(product.ImageUrl))
-                {
-                    product.ImageUrl = product.ImageUrl.Trim();
-                }
+                    // Ưu tiên lưu file ảnh upload từ máy tính (có kiểm tra định dạng & dung lượng)
+                    if (imageFile != null && imageFile.Length > 0)
+                    {
+                        var savedPath = await SaveImageAsync(imageFile);
+                        if (!string.IsNullOrEmpty(savedPath))
+                        {
+                            product.ImageUrl = savedPath;
+                        }
+                    }
+                    // Nếu không upload file thì lấy link URL người dùng nhập
+                    else if (!string.IsNullOrWhiteSpace(imageUrlInput))
+                    {
+                        product.ImageUrl = imageUrlInput.Trim();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                    {
+                        product.ImageUrl = product.ImageUrl.Trim();
+                    }
 
-                _context.Add(product);
-                await _context.SaveChangesAsync();
+                    _context.Add(product);
+                    await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = $"Đã thêm thẻ bài '{product.Name}' thành công!";
-                return RedirectToAction(nameof(Index));
+                    TempData["SuccessMessage"] = $"Đã thêm thẻ bài '{product.Name}' thành công!";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    // Hiển thị thông báo lỗi file ảnh (quá 5MB hoặc sai định dạng) ngay trên form
+                    ModelState.AddModelError(string.Empty, ex.Message);
+                }
             }
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
             return View(product);
         }
 
+        // ============================================================
         // 4. CHỈNH SỬA THẺ BÀI (CHỈ ADMIN & STAFF)
+        // ============================================================
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Edit(int? id)
         {
@@ -182,7 +201,7 @@ namespace UltraPokemon.Controllers
         {
             if (id != product.Id) return NotFound();
 
-            // [ĐÃ FIX] Bỏ qua validation khi ImageUrl rỗng để cho phép dùng ảnh mặc định theo hệ
+            // Bỏ qua validation khi ImageUrl rỗng để cho phép giữ ảnh cũ hoặc dùng ảnh mặc định theo hệ
             ModelState.Remove("ImageUrl");
             product.ImageUrl ??= string.Empty;
 
@@ -190,10 +209,14 @@ namespace UltraPokemon.Controllers
             {
                 try
                 {
-                    // Nếu người dùng upload ảnh mới -> lưu file mới
+                    // Nếu người dùng upload ảnh mới -> kiểm tra và lưu file mới
                     if (imageFile != null && imageFile.Length > 0)
                     {
-                        product.ImageUrl = await SaveImageAsync(imageFile);
+                        var savedPath = await SaveImageAsync(imageFile);
+                        if (!string.IsNullOrEmpty(savedPath))
+                        {
+                            product.ImageUrl = savedPath;
+                        }
                     }
                     // Hoặc nếu người dùng nhập URL mới
                     else if (!string.IsNullOrWhiteSpace(imageUrlInput))
@@ -205,20 +228,27 @@ namespace UltraPokemon.Controllers
                     await _context.SaveChangesAsync();
 
                     TempData["SuccessMessage"] = $"Đã cập nhật thẻ bài '{product.Name}'!";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    // Hiển thị thông báo lỗi file ảnh ngay trên form chỉnh sửa
+                    ModelState.AddModelError(string.Empty, ex.Message);
                 }
                 catch (DbUpdateConcurrencyException)
                 {
                     if (!ProductExists(product.Id)) return NotFound();
                     else throw;
                 }
-                return RedirectToAction(nameof(Index));
             }
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
             return View(product);
         }
 
+        // ============================================================
         // 5. XÓA THẺ BÀI (CHỈ ADMIN)
+        // ============================================================
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
@@ -248,24 +278,42 @@ namespace UltraPokemon.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // HÀM HỖ TRỢ LƯU FILE ẢNH VÀO WWWROOT/IMAGES/CARDS
-        private async Task<string> SaveImageAsync(IFormFile imageFile)
+        // ============================================================
+        // HÀM HỖ TRỢ KIỂM TRA & LƯU FILE ẢNH VÀO WWWROOT/IMAGES/CARDS
+        // ============================================================
+        private async Task<string?> SaveImageAsync(IFormFile? imageFile)
         {
-            string uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "cards");
-            if (!Directory.Exists(uploadsFolder))
+            if (imageFile == null || imageFile.Length == 0)
+                return null;
+
+            // 1. Giới hạn dung lượng tối đa 5MB
+            const long maxFileSize = 5 * 1024 * 1024;
+            if (imageFile.Length > maxFileSize)
+                throw new InvalidOperationException("Dung lượng ảnh không được vượt quá 5MB.");
+
+            // 2. Chỉ cho phép các định dạng ảnh phổ biến
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+            var ext = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
+            if (string.IsNullOrEmpty(ext) || !allowedExtensions.Contains(ext))
+                throw new InvalidOperationException("Chỉ chấp nhận tệp ảnh .jpg, .jpeg, .png, .webp hoặc .gif.");
+
+            // 3. Kiểm tra MIME type
+            if (!imageFile.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Tệp tải lên không đúng định dạng hình ảnh.");
+
+            // Dùng đúng _webHostEnvironment đã inject ở Constructor
+            var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "cards");
+            Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = $"{Guid.NewGuid()}{ext}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
             {
-                Directory.CreateDirectory(uploadsFolder);
+                await imageFile.CopyToAsync(stream);
             }
 
-            string uniqueFileName = Guid.NewGuid().ToString("N") + Path.GetExtension(imageFile.FileName);
-            string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await imageFile.CopyToAsync(fileStream);
-            }
-
-            return "/images/cards/" + uniqueFileName;
+            return $"/images/cards/{fileName}";
         }
 
         private bool ProductExists(int id)

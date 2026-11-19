@@ -3,11 +3,16 @@
 @{
     // Gán tiêu đề cho trang
     ViewData["Title"] = "Quản lý tài khoản";
+    var currentSearch = Context.Request.Query["search"].ToString();
+    var currentRole = Context.Request.Query["role"].ToString();
 }
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Quản lý tài khoản người dùng (Admin Panel)</h2>
+        <a asp-action="Create" class="btn btn-success">
+            <i class="bi bi-person-plus"></i> Thêm tài khoản
+        </a>
     </div>
     <hr />
 
@@ -27,15 +32,36 @@
         </div>
     }
 
+    <!-- Thanh tìm kiếm và lọc theo Role -->
+    <form method="get" asp-action="Index" class="row g-2 mb-3">
+        <div class="col-md-5">
+            <input type="text" name="search" value="@currentSearch" class="form-control" placeholder="Tìm theo họ tên hoặc email..." />
+        </div>
+        <div class="col-md-3">
+            <select name="role" class="form-select">
+                <option value="">-- Tất cả quyền hạn --</option>
+                <option value="Admin" selected="@(currentRole == "Admin")">Admin</option>
+                <option value="Staff" selected="@(currentRole == "Staff")">Staff</option>
+                <option value="Customer" selected="@(currentRole == "Customer")">Customer</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i> Tìm / Lọc
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Đặt lại</a>
+        </div>
+    </form>
+
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle shadow-sm">
             <thead class="table-dark text-center">
                 <tr>
                     <th style="width: 5%">ID</th>
                     <th>Email</th>
-                    <th style="width: 15%">Quyền hạn (Role)</th>
+                    <th style="width: 14%">Quyền hạn (Role)</th>
                     <th style="width: 15%">Trạng thái</th>
-                    <th style="width: 15%">Thao tác</th>
+                    <th style="width: 24%">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -46,17 +72,28 @@
                         <td class="text-start fw-bold">@u.Email</td>
                         <td>
                             <!-- Đổi màu huy hiệu (Badge) tự động theo Role -->
-                            <span class="badge bg-@(u.Role == "Admin" ? "danger" : "primary")">@u.Role</span>
+                            <span class="badge bg-@(u.Role == "Admin" ? "danger" : (u.Role == "Staff" ? "warning text-dark" : "primary"))">@u.Role</span>
                         </td>
                         <td>
-                            <span class="badge bg-@(u.IsApproved ? "success" : "warning text-dark")">
-                                @(u.IsApproved ? "Đã duyệt" : "Chờ duyệt")
+                            <span class="badge bg-@(u.IsApproved ? "success" : "secondary")">
+                                @(u.IsApproved ? "Hoạt động" : "Đang bị khóa")
                             </span>
                         </td>
                         <td>
                             @* [ĐÃ FIX] Khớp email Admin gốc admin@ultrapokemon.vn từ Program.cs *@
                             @if (u.Email != User.Identity?.Name && u.Email != "admin@ultrapokemon.vn")
                             {
+                                <a asp-action="Edit" asp-route-id="@u.Id" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-pencil-square"></i> Sửa
+                                </a>
+
+                                <form asp-action="ToggleLock" asp-route-id="@u.Id" method="post" style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-@(u.IsApproved ? "warning" : "success") btn-sm">
+                                        <i class="bi bi-@(u.IsApproved ? "lock" : "unlock")"></i> @(u.IsApproved ? "Khóa" : "Mở khóa")
+                                    </button>
+                                </form>
+
                                 <!-- BẮT BUỘC SỬ DỤNG FORM ĐỂ GỬI YÊU CẦU POST KÈM ANTIFORGERY TOKEN -->
                                 <form asp-action="Delete" asp-route-id="@u.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản @u.Email không?');">
                                     @Html.AntiForgeryToken()
@@ -67,8 +104,8 @@
                             }
                             else
                             {
-                                <!-- Không cho phép tự xóa chính mình hoặc tài khoản Admin gốc -->
-                                <span class="text-muted small"><em>Không thể xóa</em></span>
+                                <!-- Không cho phép tự xóa/khóa chính mình hoặc tài khoản Admin gốc -->
+                                <span class="text-muted small"><em>Tài khoản hệ thống</em></span>
                             }
                         </td>
                     </tr>

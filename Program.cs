@@ -16,12 +16,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/Account/Login";
-        options.LogoutPath = "/Account/Logout";
-        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.AccessDeniedPath = "/Home/AccessDenied"; // từ "/Account/AccessDenied"
         options.ExpireTimeSpan = TimeSpan.FromHours(12);
     });
 
@@ -44,7 +44,7 @@ using (var scope = app.Services.CreateScope())
     var context = services.GetRequiredService<AppDbContext>();
     var passwordHasher = services.GetRequiredService<IPasswordHasher<User>>();
 
-    context.Database.EnsureCreated();
+    context.Database.Migrate();
 
     // BƯỚC 2.1: Nạp dữ liệu mẫu cho bảng Categories
     if (!context.Categories.Any())

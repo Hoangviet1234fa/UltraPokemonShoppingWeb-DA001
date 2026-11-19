@@ -19,9 +19,9 @@ namespace UltraPokemon.Controllers
             _passwordHasher = new PasswordHasher<User>();
         }
 
-       
+
         // 1. CHỨC NĂNG ĐĂNG KÝ TÀI KHOẢN (REGISTER)
- 
+
         [HttpGet]
         public IActionResult Register() => View();
 
@@ -42,10 +42,13 @@ namespace UltraPokemon.Controllers
             // Khởi tạo đối tượng tài khoản mới
             var newUser = new User
             {
-                Email = model.Email,
+                Email = model.Email.Trim(),
+                FullName = string.IsNullOrWhiteSpace(model.FullName)
+                    ? model.Email.Trim()
+                    : model.FullName.Trim(),
 
-                // Gán cứng quyền "User" tại Server để ngăn chặn tấn công leo thang đặc quyền "Admin"
-                Role = "User",
+                // Gán cứng quyền "Customer" tại Server để ngăn chặn tấn công leo thang đặc quyền "Admin"
+                Role = "Customer",
 
                 // Tự động kích hoạt để người dùng có thể đăng nhập và mua hàng ngay
                 IsApproved = true
@@ -57,14 +60,14 @@ namespace UltraPokemon.Controllers
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
 
-            // [ĐÃ FIX] Sử dụng key "Success" khớp với khu vực hiển thị thông báo của _Layout.cshtml
+            //  Sử dụng key "Success" khớp với khu vực hiển thị thông báo của _Layout.cshtml
             TempData["Success"] = "Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.";
             return RedirectToAction("Login");
         }
 
-        
+
         // 2. CHỨC NĂNG ĐĂNG NHẬP (LOGIN)
-      
+
         [HttpGet]
         public IActionResult Login() => View();
 
@@ -121,9 +124,9 @@ namespace UltraPokemon.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-     
+
         // 3. CHỨC NĂNG ĐĂNG XUẤT (LOGOUT)
-       
+
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
