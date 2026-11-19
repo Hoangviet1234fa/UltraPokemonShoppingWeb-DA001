@@ -17,10 +17,7 @@ namespace UltraPokemon.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
-      
         // 1. DANH SÁCH THẺ BÀI (TÌM KIẾM + LỌC + SẮP XẾP + PHÂN TRANG)
-       
-        //  Thêm tham số int page = 1 để kích hoạt thanh phân trang trên View
         public async Task<IActionResult> Index(string? search, string? element, decimal? minPrice, decimal? maxPrice, string? sortOrder, int page = 1)
         {
             var query = _context.Products.AsQueryable();
@@ -50,13 +47,16 @@ namespace UltraPokemon.Controllers
             }
 
             // 4. Sắp xếp
+            // [ĐÃ FIX] Bổ sung "name_desc" và "newest" khớp với dropdown trên View
             query = sortOrder switch
             {
                 "price_asc" => query.OrderBy(p => p.Price),
                 "price_desc" => query.OrderByDescending(p => p.Price),
                 "power_desc" => query.OrderByDescending(p => p.Power),
                 "name_asc" => query.OrderBy(p => p.Name),
-                _ => query.OrderByDescending(p => p.Id) // Mặc định thẻ mới nhất lên đầu
+                "name_desc" => query.OrderByDescending(p => p.Name),
+                "newest" => query.OrderByDescending(p => p.Id),
+                _ => query.OrderBy(p => p.Name) // Mặc định sắp xếp A -> Z
             };
 
             // 5. Phân trang với LINQ Skip / Take
@@ -96,9 +96,7 @@ namespace UltraPokemon.Controllers
             return View(products);
         }
 
-      
         // 2. CHI TIẾT THẺ BÀI
-       
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -119,9 +117,7 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
-        // ==========================================
         // 3. THÊM THẺ BÀI MỚI (CHỈ ADMIN & STAFF)
-        // ==========================================
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Create()
         {
@@ -132,9 +128,12 @@ namespace UltraPokemon.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Staff")]
-        // SỬA LỖI: Bổ sung "Stock" vào [Bind] để lưu được số lượng tồn kho khi tạo mới
-        public async Task<IActionResult> Create([Bind("Name,ElementType,Power,Price,Stock,Description")] Product product, IFormFile? imageFile, string? imageUrlInput)
+        // [ĐÃ FIX] Bổ sung "ImageUrl" vào [Bind] và bỏ qua lỗi required nếu để trống ảnh (dùng ảnh mặc định hoặc file upload)
+        public async Task<IActionResult> Create([Bind("Name,ElementType,Power,Price,Stock,ImageUrl,Description")] Product product, IFormFile? imageFile, string? imageUrlInput)
         {
+            ModelState.Remove("ImageUrl");
+            product.ImageUrl ??= string.Empty;
+
             if (ModelState.IsValid)
             {
                 // Ưu tiên lưu file ảnh upload từ máy tính
@@ -142,10 +141,14 @@ namespace UltraPokemon.Controllers
                 {
                     product.ImageUrl = await SaveImageAsync(imageFile);
                 }
-                // Nếu không upload file thì lấy link URL người dùng dán vào
+                // Nếu không upload file thì lấy link URL người dùng nhập
                 else if (!string.IsNullOrWhiteSpace(imageUrlInput))
                 {
                     product.ImageUrl = imageUrlInput.Trim();
+                }
+                else if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                {
+                    product.ImageUrl = product.ImageUrl.Trim();
                 }
 
                 _context.Add(product);
@@ -159,9 +162,7 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
-    
         // 4. CHỈNH SỬA THẺ BÀI (CHỈ ADMIN & STAFF)
-      
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Edit(int? id)
         {
@@ -177,10 +178,13 @@ namespace UltraPokemon.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Staff")]
-        // SỬA LỖI: Bổ sung "Stock" vào [Bind] để cập nhật được số lượng tồn kho khi chỉnh sửa
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name,ElementType,Power,Price,Stock,ImageUrl,Description")] Product product, IFormFile? imageFile, string? imageUrlInput)
         {
             if (id != product.Id) return NotFound();
+
+            // [ĐÃ FIX] Bỏ qua validation khi ImageUrl rỗng để cho phép dùng ảnh mặc định theo hệ
+            ModelState.Remove("ImageUrl");
+            product.ImageUrl ??= string.Empty;
 
             if (ModelState.IsValid)
             {
@@ -214,9 +218,7 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
-        
         // 5. XÓA THẺ BÀI (CHỈ ADMIN)
-        
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
@@ -247,7 +249,6 @@ namespace UltraPokemon.Controllers
         }
 
         // HÀM HỖ TRỢ LƯU FILE ẢNH VÀO WWWROOT/IMAGES/CARDS
-    
         private async Task<string> SaveImageAsync(IFormFile imageFile)
         {
             string uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "cards");

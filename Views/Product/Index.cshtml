@@ -6,10 +6,10 @@
 @{
     ViewData["Title"] = "Danh sách thẻ bài Pokémon";
 
-    // Lấy các tham số tìm kiếm, lọc và phân trang từ ViewBag do ProductController truyền sang
-    string searchString = ViewBag.CurrentFilter ?? string.Empty;
-    string selectedElement = ViewBag.CurrentElement ?? string.Empty;
-    string sortOrder = ViewBag.CurrentSort ?? string.Empty;
+    //  Đọc đúng tên ViewBag do ProductController truyền sang (Search, Element, SortOrder)
+    string searchString = ViewBag.Search ?? string.Empty;
+    string selectedElement = ViewBag.Element ?? string.Empty;
+    string sortOrder = ViewBag.SortOrder ?? string.Empty;
     var availableElements = ViewBag.Elements as List<string> ?? new List<string>();
 
     int totalItems = ViewBag.TotalItems ?? Model.Count();
@@ -27,9 +27,7 @@
 
 <div class="py-2">
 
-    <!-- =====================================================================
-         1. KHỐI TIÊU ĐỀ, CÔNG CỤ ADMIN & BỘ LỌC TÌM KIẾM ĐA ĐIỀU KIỆN
-         ===================================================================== -->
+    <!--   1. KHỐI TIÊU ĐỀ, CÔNG CỤ ADMIN & BỘ LỌC TÌM KIẾM ĐA ĐIỀU KIỆN-->
     <section class="bg-white rounded-3 border p-4 mb-4">
 
         <!-- Hàng tiêu đề & các nút thao tác nhanh (Xóa lọc / Quản trị) -->
@@ -79,11 +77,12 @@
             </div>
         }
 
-        <!-- Form Tìm kiếm theo tên & Sắp xếp (giữ nguyên tham số elementType đang chọn) -->
+        <!-- Form Tìm kiếm theo tên & Sắp xếp (giữ nguyên tham số element đang chọn) -->
         <form asp-controller="Product" asp-action="Index" method="get" class="row g-2 align-items-center mb-3">
             @if (!string.IsNullOrWhiteSpace(selectedElement))
             {
-                <input type="hidden" name="elementType" value="@selectedElement" />
+                @* [ĐÃ FIX] Đổi name="elementType" thành name="element" khớp ProductController.Index *@
+                <input type="hidden" name="element" value="@selectedElement" />
             }
 
             <div class="col-lg-6">
@@ -91,8 +90,9 @@
                     <span class="input-group-text bg-light border-end-0 text-secondary rounded-start-2">
                         <i class="bi bi-search"></i>
                     </span>
+                    @* Đổi name="searchString" thành name="search" khớp ProductController.Index *@
                     <input type="search"
-                           name="searchString"
+                           name="search"
                            value="@searchString"
                            class="form-control border-start-0 ps-1 shadow-none rounded-end-2"
                            placeholder="Nhập tên lá bài (ví dụ: Charizard, Pikachu)..." />
@@ -122,8 +122,9 @@
         <div class="d-flex flex-wrap align-items-center gap-2 pt-3 border-top">
             <span class="text-secondary small fw-semibold me-1">Lọc theo Hệ:</span>
 
+            @* [ĐÃ FIX] Đổi asp-route-searchString thành asp-route-search *@
             <a asp-controller="Product" asp-action="Index"
-               asp-route-searchString="@searchString"
+               asp-route-search="@searchString"
                asp-route-sortOrder="@sortOrder"
                class="tcg-filter-tab @(string.IsNullOrEmpty(selectedElement) ? "active" : "")">
                 Tất cả
@@ -132,9 +133,10 @@
             @foreach (var el in availableElements)
             {
                 bool isActive = string.Equals(selectedElement, el, StringComparison.OrdinalIgnoreCase);
+                @* [ĐÃ FIX] Đổi asp-route-elementType / asp-route-searchString thành asp-route-element / asp-route-search *@
                 <a asp-controller="Product" asp-action="Index"
-                   asp-route-elementType="@el"
-                   asp-route-searchString="@searchString"
+                   asp-route-element="@el"
+                   asp-route-search="@searchString"
                    asp-route-sortOrder="@sortOrder"
                    class="tcg-filter-tab @(isActive ? "active" : "")">
                     @el
@@ -143,9 +145,7 @@
         </div>
     </section>
 
-    <!-- =====================================================================
-         2. LƯỚI HIỂN THỊ DANH SÁCH THẺ BÀI
-         ===================================================================== -->
+    <!--  2. LƯỚI HIỂN THỊ DANH SÁCH THẺ BÀI-->
     @if (!Model.Any())
     {
         <!-- Trạng thái rỗng khi không có sản phẩm khớp bộ lọc -->
@@ -268,18 +268,17 @@
             }
         </div>
 
-        <!-- =================================================================
-             3. THANH PHÂN TRANG (GIỮ NGUYÊN ĐIỀU KIỆN LỌC & SẮP XẾP)
-             ================================================================= -->
+        <!-- 3. THANH PHÂN TRANG (GIỮ NGUYÊN ĐIỀU KIỆN LỌC & SẮP XẾP) -->
         @if (totalPages > 1)
         {
             <nav aria-label="Phân trang thẻ bài" class="mt-4">
                 <ul class="pagination justify-content-center gap-1 tcg-pagination">
                     <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                        @* [ĐÃ FIX] Truyền đúng tham số search và element khi chuyển trang *@
                         <a class="page-link rounded-2" asp-action="Index"
                            asp-route-page="@(currentPage - 1)"
-                           asp-route-searchString="@searchString"
-                           asp-route-elementType="@selectedElement"
+                           asp-route-search="@searchString"
+                           asp-route-element="@selectedElement"
                            asp-route-sortOrder="@sortOrder">
                             &laquo; Trước
                         </a>
@@ -290,8 +289,8 @@
                         <li class="page-item @(i == currentPage ? "active" : "")">
                             <a class="page-link font-mono-stat rounded-2" asp-action="Index"
                                asp-route-page="@i"
-                               asp-route-searchString="@searchString"
-                               asp-route-elementType="@selectedElement"
+                               asp-route-search="@searchString"
+                               asp-route-element="@selectedElement"
                                asp-route-sortOrder="@sortOrder">
                                 @i
                             </a>
@@ -301,8 +300,8 @@
                     <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
                         <a class="page-link rounded-2" asp-action="Index"
                            asp-route-page="@(currentPage + 1)"
-                           asp-route-searchString="@searchString"
-                           asp-route-elementType="@selectedElement"
+                           asp-route-search="@searchString"
+                           asp-route-element="@selectedElement"
                            asp-route-sortOrder="@sortOrder">
                             Sau &raquo;
                         </a>
@@ -313,9 +312,7 @@
     }
 </div>
 
-<!-- =========================================================================
-     CSS RIÊNG CHO TRANG DANH SÁCH THẺ BÀI
-     ========================================================================= -->
+<!--   CSS RIÊNG CHO TRANG DANH SÁCH THẺ BÀI-->
 <style>
     /* Thẻ lọc theo hệ nguyên tố dáng vuông vức gọn gàng */
     .tcg-filter-tab {

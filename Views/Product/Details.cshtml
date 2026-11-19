@@ -8,8 +8,8 @@
     // Khối mã C# xử lý logic trước khi hiển thị giao diện
     ViewData["Title"] = "Chi tiết - " + Model.Name; // Đặt tiêu đề cho tab trình duyệt
 
-    // Lấy danh sách các thẻ bài liên quan từ ViewBag, nếu không có thì gán danh sách rỗng để tránh lỗi Null
-    var related = ViewBag.Related as List<Product> ?? new List<Product>();
+    // Đọc đúng tên ViewBag.RelatedProducts do ProductController.Details truyền sang
+    var related = ViewBag.RelatedProducts as List<Product> ?? new List<Product>();
 
     // Gọi Helper để lấy màu sắc Bootstrap tương ứng với Hệ (Ví dụ: Fire -> danger (đỏ), Water -> primary (xanh dương))
     var color = ElementHelper.Color(Model.ElementType);
@@ -23,9 +23,8 @@
     <a asp-action="Index" class="btn btn-secondary mb-3">&larr; Quay lại danh sách</a>
 
     <div class="row bg-white rounded-4 shadow-sm p-4">
-    
-        <!-- CỘT TRÁI: HIỂN THỊ HÌNH ẢNH SẢN PHẨM  -->
-       
+
+        <!-- CỘT TRÁI: HIỂN THỊ HÌNH ẢNH SẢN PHẨM -->
         <div class="col-md-5 text-center">
             <div class="detail-card-wrap card-sparkle d-inline-block rounded">
                 <!-- Xử lý ảnh: ImageHelper tạo đường dẫn chuẩn. Sự kiện onerror giúp tự động tải ảnh mặc định (fallback) nếu file ảnh bị lỗi hoặc mất -->
@@ -38,9 +37,7 @@
             </div>
         </div>
 
-      
-        <!-- CỘT PHẢI: HIỂN THỊ THÔNG TIN & CHỨC NĂNG     -->
-       
+        <!-- CỘT PHẢI: HIỂN THỊ THÔNG TIN & CHỨC NĂNG -->
         <div class="col-md-7">
             <h2 class="fw-bold">@Model.Name</h2>
             <hr />
@@ -103,8 +100,6 @@
                 }
 
                 <!-- 2. NÚT SỬA SẢN PHẨM (CHỈ DÀNH CHO ADMIN) -->
-                <!-- LOGIC PHÂN QUYỀN: Kiểm tra xem User đã đăng nhập chưa VÀ có nằm trong quyền "Admin" không.
-                     Nếu đúng Admin thì mới hiển thị nút bấm Sửa ra màn hình. -->
                 @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin"))
                 {
                     <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-lg ms-3">Sửa</a>
@@ -113,9 +108,7 @@
         </div>
     </div>
 
-  
-    <!-- PHẦN DƯỚI: SẢN PHẨM LIÊN QUAN (CÙNG HỆ)  -->
-   
+    <!-- PHẦN DƯỚI: SẢN PHẨM LIÊN QUAN (CÙNG HỆ) -->
     <!-- Dùng lệnh Any() để kiểm tra nếu danh sách có ít nhất 1 sản phẩm thì mới hiển thị khu vực này -->
     @if (related.Any())
     {

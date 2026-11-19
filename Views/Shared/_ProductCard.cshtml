@@ -14,7 +14,10 @@
     <!-- Khung hiển thị hình ảnh thẻ bài (sạch, không bị sticker che góc) -->
     <div class="px-3 py-2 text-center">
         <a asp-controller="Product" asp-action="Details" asp-route-id="@Model.Id" class="d-block bg-light rounded-2 p-3">
-            <img src="@(string.IsNullOrEmpty(Model.ImageUrl) ? "/images/default-card.png" : Model.ImageUrl)"
+            @* [ĐÃ FIX] Sử dụng ImageHelper.Resolve kèm fallback SVG mặc định *@
+            <img src="@ImageHelper.Resolve(Env, Model)"
+                 onerror="this.onerror=null;this.src=this.dataset.fallback;"
+                 data-fallback="@ImageHelper.Placeholder(Model)"
                  alt="@Model.Name"
                  class="img-fluid"
                  style="height: 215px; object-fit: contain;" />
@@ -51,8 +54,9 @@
             {
                 <form asp-controller="Cart" asp-action="Add" method="post" class="flex-grow-1">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="productId" value="@Model.Id" />
-                    <input type="hidden" name="quantity" value="1" />
+                    @* Đổi name="productId" thành name="id" và truyền returnUrl khớp CartController.Add *@
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
                     <button type="submit" class="btn btn-dark btn-sm w-100 rounded-2 fw-medium">
                         Thêm vào giỏ
                     </button>

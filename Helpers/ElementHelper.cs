@@ -2,7 +2,7 @@ namespace UltraPokemon.Helpers;
 
 public static class ElementHelper
 {
-    /// <summary>Trả về màu sắc Bootstrap theo hệ nguyên tố: Lửa=đỏ, Nước=xanh dương, Sét=vàng, Đất=xanh lá.</summary>
+    /// <>Trả về màu sắc Bootstrap theo hệ nguyên tố: Lửa=đỏ, Nước=xanh dương, Sét=vàng, Đất=xanh lá.</>
     public static string Color(string? element)
     {
         var el = TextHelper.Normalize(element);

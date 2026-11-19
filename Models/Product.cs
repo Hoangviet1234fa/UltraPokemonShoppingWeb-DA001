@@ -6,6 +6,7 @@ public class Product
 {
     public int Id { get; set; }
 
+    //  Khôi phục chuỗi thông báo tiếng Việt chuẩn UTF-8
     [Required(ErrorMessage = "Tên thẻ bài không được để trống.")]
     [StringLength(100, ErrorMessage = "Tên thẻ bài tối đa 100 ký tự.")]
     public string Name { get; set; } = string.Empty;
@@ -25,5 +26,5 @@ public class Product
     public string Description { get; set; } = string.Empty;
 
     [Range(0, int.MaxValue, ErrorMessage = "Số lượng tồn kho không được âm.")]
-    public int Stock { get; set; }  // <--- Thêm dòng này để quản lý tồn kho và thanh toán
+    public int Stock { get; set; }  // Quản lý tồn kho và thanh toán
 }

@@ -22,7 +22,6 @@
 <div class="container py-4">
 
     <!-- HEADER BẢNG ĐIỀU KHIỂN -->
-    
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 p-4 rounded-4 text-white shadow-sm"
          style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
         <div>
@@ -44,9 +43,7 @@
         </div>
     </div>
 
-   
-    <!-- PHẦN 1: 6 THẺ CHỈ SỐ TỔNG QUAN (KPI CARDS)     -->
-    
+    <!-- PHẦN 1: 6 THẺ CHỈ SỐ TỔNG QUAN (KPI CARDS) -->
     <div class="row g-3 mb-4">
         <!-- Card 1: Tổng đơn hàng -->
         <div class="col-md-4">
@@ -138,7 +135,8 @@
                     <div>
                         <span class="text-muted small fw-semibold text-uppercase">Đơn chờ xác nhận</span>
                         <h2 class="fw-bold text-danger my-1">@Model.PendingOrders</h2>
-                        <a asp-controller="AdminOrders" asp-action="Index" asp-route-status="0"
+                        @* [ĐÃ FIX] Đổi asp-route-status="0" thành "Pending" để dropdown lọc hiển thị đúng trạng thái *@
+                        <a asp-controller="AdminOrders" asp-action="Index" asp-route-status="Pending"
                            class="small text-decoration-none fw-semibold">
                             Xử lý ngay <i class="bi bi-arrow-right"></i>
                         </a>
@@ -151,9 +149,7 @@
         </div>
     </div>
 
-  
-    <!-- PHẦN 2: BIỂU ĐỒ TRỰC QUAN (DOANH THU 12 THÁNG & TRẠNG THÁI ĐƠN HÀNG)  -->
-    
+    <!-- PHẦN 2: BIỂU ĐỒ TRỰC QUAN (DOANH THU 12 THÁNG & TRẠNG THÁI ĐƠN HÀNG) -->
     <div class="row g-4 mb-4">
         <!-- Biểu đồ cột: Doanh thu 12 tháng gần nhất -->
         <div class="col-lg-8">
@@ -200,9 +196,7 @@
         </div>
     </div>
 
-    
-    <!-- PHẦN 3: THỐNG KÊ CỔNG THANH TOÁN & 5 ĐƠN HÀNG MỚI NHẤT-->
-   
+    <!-- PHẦN 3: THỐNG KÊ CỔNG THANH TOÁN & 5 ĐƠN HÀNG MỚI NHẤT -->
     <div class="row g-4">
         <!-- Cột trái: Thống kê doanh thu theo cổng thanh toán -->
         <div class="col-lg-4">

@@ -121,7 +121,8 @@
                                 <tr>
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center gap-3">
-                                            <img src="@(string.IsNullOrEmpty(item.Product?.ImageUrl) ? "/images/default-card.png" : item.Product.ImageUrl)"
+                                            @* [ĐÃ FIX] Dùng ImageHelper.Resolve tránh lỗi mất ảnh *@
+                                            <img src="@(item.Product != null ? ImageHelper.Resolve(Env, item.Product) : "/images/default-card.png")"
                                                  alt="@item.Product?.Name"
                                                  class="rounded-3 border"
                                                  style="width: 48px; height: 64px; object-fit: cover;" />

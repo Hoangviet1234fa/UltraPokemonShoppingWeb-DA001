@@ -11,7 +11,7 @@ public static class ImageHelper
     public static string Slug(string? name) =>
         Regex.Replace(TextHelper.Normalize(name), "[^a-z0-9]+", "-").Trim('-');
 
-    /// <summary>Cơ chế tìm ảnh 3 tầng: ImageUrl trong DB -> file wwwroot/images/{tên-thẻ}.ext -> ảnh SVG mặc định theo hệ.</summary>
+    /// <>Cơ chế tìm ảnh 3 tầng: ImageUrl trong DB -> file wwwroot/images/{tên-thẻ}.ext -> ảnh SVG mặc định theo hệ.</>
     public static string Resolve(IWebHostEnvironment env, Product p)
     {
         if (!string.IsNullOrWhiteSpace(p.ImageUrl)) return p.ImageUrl;
@@ -26,10 +26,11 @@ public static class ImageHelper
         return Placeholder(p);
     }
 
-    /// <summary>Tạo ảnh SVG thẻ bài mặc định có màu theo hệ khi chưa có ảnh thực tế.</summary>
+    /// <>Tạo ảnh SVG thẻ bài mặc định có màu theo hệ khi chưa có ảnh thực tế.</>
     public static string Placeholder(Product p)
     {
         var el = TextHelper.Normalize(p.ElementType);
+        //  Khôi phục icon chuẩn UTF-8 cho từng hệ nguyên tố
         var (c1, c2, icon) =
             el.Contains("lua") || el.Contains("fire") ? ("#ff8a65", "#d84315", "🔥") :
             el.Contains("nuoc") || el.Contains("water") ? ("#64b5f6", "#1565c0", "💧") :

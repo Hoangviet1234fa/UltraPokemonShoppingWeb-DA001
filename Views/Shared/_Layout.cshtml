@@ -1,9 +1,7 @@
 ﻿@using System.Text.Json
 
 @{
-    
     // 1. ĐỌC DỮ LIỆU GIỎ HÀNG TỪ SESSION & TÍNH TỔNG SỐ LƯỢNG LÁ BÀI HIỆN CÓ
-   
     int cartCount = 0;
 
     foreach (var key in Context.Session.Keys)
@@ -159,12 +157,13 @@
                         </ul>
 
                         <!-- Thanh tìm kiếm nhanh trên header -->
+                        <!--  Đổi name="searchString" thành name="search" để khớp với ProductController.Index -->
                         <form asp-controller="Product" asp-action="Index" method="get"
                               class="up-nav-search d-none d-xl-flex align-items-center me-3">
                             <i class="bi bi-search up-search-icon"></i>
                             <input type="search"
-                                   name="searchString"
-                                   value="@Context.Request.Query["searchString"]"
+                                   name="search"
+                                   value="@Context.Request.Query["search"]"
                                    class="up-search-input"
                                    placeholder="Tìm nhanh thẻ bài..."
                                    aria-label="Tìm nhanh thẻ bài" />
@@ -189,7 +188,8 @@
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark up-dropdown shadow-lg">
                                         <li>
-                                            <a class="dropdown-item" asp-controller="Order" asp-action="MyOrders">
+                                            <!-- [ĐÃ FIX] Trỏ đúng sang CartController/MyOrders thay vì OrderController không tồn tại -->
+                                            <a class="dropdown-item" asp-controller="Cart" asp-action="MyOrders">
                                                 <i class="bi bi-box-seam me-2 text-secondary"></i>Đơn hàng của tôi
                                             </a>
                                         </li>
@@ -219,6 +219,29 @@
 
         <!-- NỘI DUNG TỪNG TRANG -->
         <main role="main" class="container my-4 flex-grow-1">
+            @*  Hiển thị thông báo phản hồi chung (TempData) từ các Controller *@
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
             @RenderBody()
         </main>
 
@@ -291,7 +314,7 @@
                                     <i class="bi bi-envelope text-warning mt-1"></i>
                                     <div>
                                         <div class="text-secondary">Email chăm sóc khách hàng</div>
-                                        <div class="text-light font-mono-stat">cskh@ultrapokemon..vn</div>
+                                        <div class="text-light font-mono-stat">cskh@ultrapokemon.vn</div>
                                     </div>
                                 </li>
                                 <li class="d-flex align-items-start gap-3">
@@ -343,7 +366,7 @@
 
     @await RenderSectionAsync("Scripts", required: false)
 
-    <!--  CSS NỘI BỘ CHO THANH ĐIỀU HƯỚNG (NAVBAR) -->
+    <!-- CSS NỘI BỘ CHO THANH ĐIỀU HƯỚNG (NAVBAR) -->
     <style>
             .up-header {
                 background: rgba(11, 17, 32, 0.88);

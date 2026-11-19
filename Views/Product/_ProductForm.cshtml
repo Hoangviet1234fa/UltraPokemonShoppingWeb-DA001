@@ -1,4 +1,9 @@
 @model UltraPokemon.Models.Product
+@{
+    // Chuyển đổi ViewBag.Categories (do ProductController truyền sang) thành SelectList
+    var categories = ViewBag.Categories as IEnumerable<UltraPokemon.Models.Category> ?? Enumerable.Empty<UltraPokemon.Models.Category>();
+    var elementSelectList = new SelectList(categories, "Name", "Name", Model?.ElementType);
+}
 
 <div class="mb-3">
     <label asp-for="Name" class="form-label fw-bold">Tên thẻ bài <span class="text-danger">*</span></label>
@@ -9,8 +14,8 @@
 <div class="row">
     <div class="col-md-6 mb-3">
         <label asp-for="ElementType" class="form-label fw-bold">Hệ nguyên tố <span class="text-danger">*</span></label>
-        <!-- [ĐÃ FIX] Dùng Dropdown chọn hệ từ bảng Categories để tránh nhập sai tên hệ -->
-        <select asp-for="ElementType" asp-items="ViewBag.ElementList" class="form-select">
+        <!--  Dùng elementSelectList từ ViewBag.Categories để hiển thị đúng danh sách Hệ -->
+        <select asp-for="ElementType" asp-items="elementSelectList" class="form-select">
             <option value="">-- Chọn hệ nguyên tố --</option>
         </select>
         <span asp-validation-for="ElementType" class="text-danger small"></span>

@@ -10,13 +10,16 @@ namespace UltraPokemon.Controllers;
 public class CartController : Controller
 {
     private readonly AppDbContext _db;
+    private const string PendingOnlineOrderKey = "PENDING_ONLINE_ORDER_ID";
+
     public CartController(AppDbContext db) => _db = db;
 
-   
     // 1. QUẢN LÝ GIỎ HÀNG (XEM, THÊM, CẬP NHẬT SỐ LƯỢNG, XÓA, LÀM RỖNG)
-
     public async Task<IActionResult> Index()
     {
+        //  Nếu khách quay lại giỏ hàng từ cổng thanh toán mà chưa xác nhận trả tiền -> hoàn đơn nháp & giữ nguyên giỏ
+        await RollbackAbandonedOnlineOrderAsync();
+
         var cart = CartSession.Get(HttpContext.Session);
         var ids = cart.Keys.ToList();
         var products = await _db.Products.AsNoTracking().Where(p => ids.Contains(p.Id)).ToListAsync();
@@ -98,13 +101,14 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    
     // 2. THANH TOÁN (CHECKOUT) & TẠO ĐƠN HÀNG (TRANSACTION)
-    
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> Checkout()
     {
+        // Nếu khách bấm Back từ trang QR MoMo/ATM quay về Checkout -> hoàn đơn nháp & giữ nguyên giỏ hàng
+        await RollbackAbandonedOnlineOrderAsync();
+
         var cart = CartSession.Get(HttpContext.Session);
         if (!cart.Any())
         {
@@ -133,6 +137,9 @@ public class CartController : Controller
 
     private async Task<IActionResult> ExecuteCheckoutAsync(CheckoutViewModel model)
     {
+        // Dọn dẹp đơn thanh toán online chưa hoàn tất trước đó (nếu có)
+        await RollbackAbandonedOnlineOrderAsync();
+
         var cart = CartSession.Get(HttpContext.Session);
         if (!cart.Any())
         {
@@ -198,20 +205,21 @@ public class CartController : Controller
             await _db.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            // Làm rỗng giỏ hàng sau khi tạo đơn thành công
-            CartSession.Save(HttpContext.Session, new Dictionary<int, int>());
-
-            // [ĐÃ FIX] Khôi phục chuỗi tiếng Việt chuẩn UTF-8 để điều hướng đúng cổng thanh toán
+            // [ĐÃ FIX] Với thanh toán Online: CHƯA xóa giỏ hàng ngay, lưu tạm ID đơn chờ thanh toán
             if (model.PaymentMethod == "Ví Momo")
             {
+                HttpContext.Session.SetInt32(PendingOnlineOrderKey, order.Id);
                 return RedirectToAction(nameof(MomoPayment), new { orderId = order.Id });
             }
 
             if (model.PaymentMethod == "Chuyển khoản Ngân hàng (ATM)" || model.PaymentMethod == "Visa Card")
             {
+                HttpContext.Session.SetInt32(PendingOnlineOrderKey, order.Id);
                 return RedirectToAction(nameof(AtmPayment), new { orderId = order.Id });
             }
 
+            // Với COD: đơn hàng hoàn tất ngay nên làm rỗng giỏ hàng
+            CartSession.Save(HttpContext.Session, new Dictionary<int, int>());
             TempData["Success"] = $"Đặt hàng thành công ({order.OrderCode})! Đơn hàng COD của bạn đang chờ duyệt.";
             return RedirectToAction(nameof(MyOrders));
         }
@@ -224,9 +232,7 @@ public class CartController : Controller
         }
     }
 
-   
     // 3. CÁC CỔNG THANH TOÁN TRỰC TUYẾN (MOMO & ATM / VISA)
-    
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> MomoPayment(int orderId)
@@ -262,17 +268,26 @@ public class CartController : Controller
 
         if (order == null) return NotFound();
 
+        // [ĐÃ FIX] Chỉ xóa giỏ hàng sau khi khách đã xác nhận thanh toán thành công
+        HttpContext.Session.Remove(PendingOnlineOrderKey);
+        CartSession.Save(HttpContext.Session, new Dictionary<int, int>());
+
         TempData["Success"] = $"Thanh toán qua {order.PaymentMethod} thành công cho đơn hàng {order.OrderCode}!";
         return RedirectToAction(nameof(MyOrders));
     }
 
-    
     // 4. LỊCH SỬ ĐƠN HÀNG & HỦY ĐƠN CHỜ DUYỆT (HOÀN KHO)
-   
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> MyOrders()
     {
+        // Nếu khách bấm nút "Thanh toán sau • Xem đơn hàng của tôi", chốt đơn đó và làm rỗng giỏ hàng
+        if (HttpContext.Session.GetInt32(PendingOnlineOrderKey).HasValue)
+        {
+            HttpContext.Session.Remove(PendingOnlineOrderKey);
+            CartSession.Save(HttpContext.Session, new Dictionary<int, int>());
+        }
+
         var userEmail = User.Identity!.Name!;
         var orders = await _db.Orders
             .AsNoTracking()
@@ -333,6 +348,36 @@ public class CartController : Controller
         }
 
         return RedirectToAction(nameof(MyOrders));
+    }
+
+    // Tự động hoàn kho & xóa đơn nháp nếu khách bỏ dở thanh toán online để quay lại giỏ hàng
+    private async Task RollbackAbandonedOnlineOrderAsync()
+    {
+        var pendingOrderId = HttpContext.Session.GetInt32(PendingOnlineOrderKey);
+        if (!pendingOrderId.HasValue) return;
+
+        HttpContext.Session.Remove(PendingOnlineOrderKey);
+
+        var abandonedOrder = await _db.Orders
+            .Include(o => o.OrderDetails)
+            .ThenInclude(od => od.Product)
+            .FirstOrDefaultAsync(o => o.Id == pendingOrderId.Value && o.Status == OrderStatus.Pending);
+
+        if (abandonedOrder != null)
+        {
+            foreach (var detail in abandonedOrder.OrderDetails)
+            {
+                if (detail.Product != null)
+                {
+                    detail.Product.Stock += detail.Quantity;
+                    _db.Products.Update(detail.Product);
+                }
+            }
+
+            _db.OrderDetails.RemoveRange(abandonedOrder.OrderDetails);
+            _db.Orders.Remove(abandonedOrder);
+            await _db.SaveChangesAsync();
+        }
     }
 
     // Hàm hỗ trợ tính toán giỏ hàng và truyền sang ViewBag cho Checkout.cshtml

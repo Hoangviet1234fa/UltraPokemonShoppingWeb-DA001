@@ -1,166 +1,145 @@
 ﻿@model UltraPokemon.Models.Order
 @{
-    ViewData["Title"] = "Thanh toán qua Ví MoMo / VietQR";
-    // Chuẩn hóa nội dung chuyển khoản không dấu (VD: ULTRA000005)
-    string transferNote = (Model.OrderCode ?? $"ULTRA{Model.Id:D6}").Replace("#", "");
+    ViewData["Title"] = "Cổng thanh toán MoMo / VietQR";
+
+    // Cấu hình tài khoản nhận tiền (khớp với tài khoản trên QR của bạn)
+    string bankId = "VCB"; // Vietcombank
+    string accountNo = "1066241116";
+    string accountName = "NGUYEN VIET HOANG VIET";
+
+    // Lấy số tiền nguyên và mã đơn không dấu '#' để nhúng vào mã QR
+    long amount = (long)Math.Round(Model.TotalAmount);
+    string transferContent = (Model.OrderCode ?? $"ULTRA{Model.Id:D6}").Replace("#", "").Trim();
+
+    // Link tạo ảnh VietQR động: tự động điền sẵn số tiền & nội dung khi quét bằng MoMo / App Ngân hàng
+    string dynamicQrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-qr_only.png" +
+                          $"?amount={amount}" +
+                          $"&addInfo={Uri.EscapeDataString(transferContent)}" +
+                          $"&accountName={Uri.EscapeDataString(accountName)}";
 }
 
 <div class="container py-4">
-    <div class="card border-0 shadow-lg rounded-4 overflow-hidden mx-auto" style="max-width: 880px;">
-      
-        <!-- 1. HEADER CỔNG THANH TOÁN  -->
-        
-        <div class="momo-gateway-header text-white p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="momo-logo-box">
-                    <i class="bi bi-qr-code-scan"></i>
-                </div>
-                <div>
-                    <h4 class="fw-bold mb-0">Cổng thanh toán MoMo / VietQR</h4>
-                    <div class="small text-white-50">
-                        Quét mã QR bằng ứng dụng MoMo hoặc ứng dụng Ngân hàng bất kỳ
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+
+                <!-- HEADER MÀU ĐẶC TRƯNG MOMO -->
+                <div class="p-4 text-white d-flex flex-wrap justify-content-between align-items-center gap-3"
+                     style="background: linear-gradient(135deg, #a50064 0%, #d82d8b 100%);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-white bg-opacity-25 rounded-3 p-2.5 d-flex align-items-center justify-content-center">
+                            <i class="bi bi-qr-code-scan fs-3"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-1">Cổng thanh toán MoMo / VietQR</h4>
+                            <p class="mb-0 small text-white-50">
+                                Quét mã QR bằng ứng dụng MoMo hoặc ứng dụng Ngân hàng bất kỳ
+                            </p>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Đồng hồ đếm ngược phiên giao dịch -->
-            <div class="px-3 py-2 rounded-3 bg-black bg-opacity-25 border border-white border-opacity-25 text-end">
-                <div class="text-white-50" style="font-size: 0.72rem;">Giao dịch hết hạn sau</div>
-                <div class="fw-bold fs-5 font-monospace text-warning" id="qrCountdown">10:00</div>
-            </div>
-        </div>
-
-     
-        <!-- 2. NỘI DUNG CHÍNH: CỘT MÃ QR (TRÁI) & THÔNG TIN ĐƠN HÀNG (PHẢI)   -->
-       
-        <div class="card-body bg-white p-4 p-md-5">
-            <div class="row g-4 align-items-center">
-                <!-- CỘT TRÁI: HIỂN THỊ MÃ QR CỦA BẠN -->
-                <div class="col-md-6 text-center">
-                    <div class="qr-frame-box mx-auto p-3 rounded-4 border shadow-sm bg-white">
-                        <div class="d-flex justify-content-center align-items-center gap-2 mb-2 text-muted small fw-semibold">
-                            <i class="bi bi-shield-check text-success"></i>
-                            <span>MÃ THANH TOÁN CHÍNH THỨC</span>
-                        </div>
-
-                        <!-- Ảnh mã QR được lưu tại wwwroot/images/momo-qr.png -->
-                        <img src="~/images/momo-qr.png"
-                             alt="Mã QR thanh toán đơn hàng @Model.OrderCode"
-                             class="img-fluid rounded-3 qr-code-img" />
-
-                        <div class="mt-3 pt-2 border-top small text-muted">
-                            Mở ứng dụng <strong>MoMo</strong> hoặc <strong>App Ngân hàng</strong> &rarr; Chọn <strong>Quét mã QR</strong>
-                        </div>
+                    <div class="bg-dark bg-opacity-25 px-3 py-2 rounded-3 text-end">
+                        <div class="small text-white-50" style="font-size: 0.75rem;">Giao dịch hết hạn sau</div>
+                        <div id="countdownTimer" class="fw-bold text-warning fs-5 font-mono-stat">10:00</div>
                     </div>
                 </div>
 
-                <!-- CỘT PHẢI: CHI TIẾT CHUYỂN KHOẢN & XÁC NHẬN -->
-                <div class="col-md-6">
-                    <div class="p-3 p-sm-4 rounded-4 bg-light border mb-3">
-                        <div class="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
-                            <span class="text-muted small">Mã đơn hàng</span>
-                            <span class="fw-bold text-dark">@Model.OrderCode</span>
-                        </div>
+                <!-- NỘI DUNG CHÍNH -->
+                <div class="card-body bg-white p-4 p-lg-5">
+                    <div class="row g-4 align-items-center">
 
-                        <div class="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
-                            <span class="text-muted small">Người nhận hàng</span>
-                            <span class="fw-semibold text-dark text-end">@Model.FullName</span>
-                        </div>
+                        <!-- CỘT TRÁI: MÃ QR ĐỘNG -->
+                        <div class="col-md-5 text-center">
+                            <div class="border rounded-4 p-3 shadow-sm bg-light">
+                                <div class="small fw-bold text-secondary mb-2">
+                                    <i class="bi bi-shield-check text-success me-1"></i>MÃ THANH TOÁN CHÍNH THỨC
+                                </div>
 
-                        <!-- Số tiền cần thanh toán -->
-                        <div class="pb-3 mb-3 border-bottom">
-                            <div class="text-muted small mb-1">Số tiền thanh toán</div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-3 fw-bold text-danger" style="font-variant-numeric: tabular-nums;">
-                                    @Model.TotalAmount.ToString("N0")đ
-                                </span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        onclick="copyText('@((long)Model.TotalAmount)', this)">
-                                    <i class="bi bi-clipboard me-1"></i>Sao chép
-                                </button>
+                                <div class="bg-white p-2 rounded-3 border d-inline-block">
+                                    <img src="@dynamicQrUrl"
+                                         alt="Mã QR thanh toán đơn hàng @transferContent"
+                                         class="img-fluid"
+                                         style="width: 220px; height: 220px; object-fit: contain;" />
+                                </div>
+
+                                <div class="small text-muted mt-3" style="font-size: 0.8rem;">
+                                    Mở ứng dụng <strong>MoMo</strong> hoặc <strong>App Ngân hàng</strong> &rarr;<br />
+                                    Chọn <strong>Quét mã QR</strong> (tự động điền số tiền &amp; nội dung)
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Nội dung chuyển khoản kèm nút sao chép -->
-                        <div>
-                            <div class="text-muted small mb-1">Nội dung chuyển khoản (Bắt buộc)</div>
-                            <div class="d-flex justify-content-between align-items-center bg-white p-2 px-3 rounded-3 border">
-                                <span class="fw-bold text-primary font-monospace">@transferNote</span>
-                                <button type="button" class="btn btn-sm btn-outline-primary"
-                                        onclick="copyText('@transferNote', this)">
-                                    <i class="bi bi-clipboard me-1"></i>Sao chép
-                                </button>
+                        <!-- CỘT PHẢI: CHI TIẾT ĐƠN HÀNG & XÁC NHẬN -->
+                        <div class="col-md-7">
+                            <div class="border rounded-4 p-3 p-lg-4 mb-3 bg-light bg-opacity-50">
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">Mã đơn hàng</span>
+                                    <span class="fw-bold text-dark font-mono-stat">@Model.OrderCode</span>
+                                </div>
+
+                                <div class="d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">Người nhận hàng</span>
+                                    <span class="fw-bold text-dark">@Model.FullName</span>
+                                </div>
+
+                                <div class="py-2 border-bottom">
+                                    <div class="text-muted small mb-1">Số tiền thanh toán</div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-danger fs-3 font-mono-stat">@Model.TotalAmount.ToString("N0")đ</span>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                onclick="copyText('@amount', this)">
+                                            <i class="bi bi-clipboard me-1"></i>Sao chép
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="pt-2">
+                                    <div class="text-muted small mb-1">Nội dung chuyển khoản (Bắt buộc)</div>
+                                    <div class="d-flex justify-content-between align-items-center bg-white border rounded-2 px-3 py-2">
+                                        <span class="fw-bold text-primary font-mono-stat">@transferContent</span>
+                                        <button type="button" class="btn btn-outline-primary btn-sm"
+                                                onclick="copyText('@transferContent', this)">
+                                            <i class="bi bi-clipboard me-1"></i>Sao chép
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
+
+                            <div class="alert alert-warning small rounded-3 mb-3">
+                                <i class="bi bi-info-circle-fill me-1"></i>
+                                Sau khi quét mã và chuyển khoản thành công, vui lòng nhấn nút
+                                <strong>"Tôi đã thanh toán"</strong> bên dưới để hệ thống ghi nhận đơn hàng.
+                            </div>
+
+                            <!-- FORM XÁC NHẬN ĐÃ THANH TOÁN -->
+                            <form asp-controller="Cart" asp-action="ConfirmOnlinePayment" method="post" class="mb-2">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="orderId" value="@Model.Id" />
+                                <button type="submit"
+                                        class="btn text-white fw-bold w-100 py-3 rounded-3 shadow-sm"
+                                        style="background-color: #a50064;">
+                                    <i class="bi bi-check-circle-fill me-2"></i>TÔI ĐÃ THANH TOÁN (@Model.TotalAmount.ToString("N0")đ)
+                                </button>
+                            </form>
+
+                            <a asp-controller="Cart" asp-action="MyOrders"
+                               class="btn btn-outline-secondary w-100 py-2 rounded-3 small fw-semibold">
+                                Thanh toán sau &bull; Xem đơn hàng của tôi
+                            </a>
+
+                            <a asp-controller="Cart" asp-action="Index"
+                               class="btn btn-light border text-secondary w-100 py-2 rounded-3 small fw-semibold mt-2">
+                                &larr; Quay lại giỏ hàng (Hủy thanh toán)
+                            </a>
                         </div>
+
                     </div>
-
-                    <!-- Lưu ý nhỏ -->
-                    <div class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis small d-flex align-items-start gap-2 rounded-3 mb-4">
-                        <i class="bi bi-info-circle-fill mt-1"></i>
-                        <div>
-                            Sau khi quét mã và chuyển khoản thành công, vui lòng nhấn nút <strong>"Tôi đã thanh toán"</strong> bên dưới để hệ thống ghi nhận đơn hàng.
-                        </div>
-                    </div>
-
-                    <!-- Form xác nhận hoàn tất thanh toán gửi về CartController/ConfirmOnlinePayment -->
-                    <form asp-controller="Cart" asp-action="ConfirmOnlinePayment" method="post" class="d-grid gap-2">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="orderId" value="@Model.Id" />
-
-                        <button type="submit" class="btn btn-lg text-white fw-bold py-3 rounded-3 momo-confirm-btn shadow-sm">
-                            <i class="bi bi-check-circle-fill me-2"></i>TÔI ĐÃ THANH TOÁN (@Model.TotalAmount.ToString("N0")đ)
-                        </button>
-
-                        <a asp-controller="Cart" asp-action="MyOrders" class="btn btn-outline-secondary fw-semibold py-2 rounded-3">
-                            Thanh toán sau &bull; Xem đơn hàng của tôi
-                        </a>
-                    </form>
                 </div>
+
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    .momo-gateway-header {
-        background: linear-gradient(135deg, #a50064 0%, #d82d8b 100%);
-    }
-
-    .momo-logo-box {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-    }
-
-    .qr-frame-box {
-        max-width: 320px;
-        border-color: #fbcfe8 !important;
-    }
-
-    .qr-code-img {
-        width: 100%;
-        max-width: 260px;
-        height: auto;
-        object-fit: contain;
-    }
-
-    .momo-confirm-btn {
-        background-color: #a50064;
-        border-color: #a50064;
-        transition: background-color 0.15s ease, transform 0.15s ease;
-    }
-
-        .momo-confirm-btn:hover {
-            background-color: #870052;
-            border-color: #870052;
-            transform: translateY(-1px);
-        }
-</style>
 
 @section Scripts {
     <script>
@@ -169,27 +148,24 @@
             navigator.clipboard.writeText(text).then(() => {
                 const originalHtml = btn.innerHTML;
                 btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Đã chép';
-                setTimeout(() => {
-                    btn.innerHTML = originalHtml;
-                }, 1500);
+                setTimeout(() => btn.innerHTML = originalHtml, 1500);
             });
         }
 
-        // Đồng hồ đếm ngược 10 phút
+        // Bộ đếm ngược thời gian giao dịch 10 phút
         document.addEventListener("DOMContentLoaded", function () {
-            let secondsLeft = 10 * 60;
-            const timerEl = document.getElementById("qrCountdown");
-
-            const interval = setInterval(() => {
-                secondsLeft--;
-                if (secondsLeft <= 0) {
+            let seconds = 10 * 60;
+            const timerEl = document.getElementById("countdownTimer");
+            const interval = setInterval(function () {
+                seconds--;
+                if (seconds <= 0) {
                     clearInterval(interval);
                     timerEl.textContent = "00:00";
                     return;
                 }
-                const mins = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
-                const secs = String(secondsLeft % 60).padStart(2, "0");
-                timerEl.textContent = `${mins}:${secs}`;
+                const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+                const s = String(seconds % 60).padStart(2, '0');
+                timerEl.textContent = `${m}:${s}`;
             }, 1000);
         });
     </script>

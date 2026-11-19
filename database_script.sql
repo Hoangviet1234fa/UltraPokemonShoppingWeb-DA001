@@ -1,6 +1,4 @@
-
 -- HỆ THỐNG CƠ SỞ DỮ LIỆU: ULTRAPOKÉMON CARD STORE (ASP.NET CORE MVC)
-
 
 -- 1. TẠO CƠ SỞ DỮ LIỆU
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = N'UltraPokemonDB')
@@ -38,11 +36,13 @@ CREATE TABLE dbo.Users (
     FullName NVARCHAR(100) NOT NULL DEFAULT N'Thành viên UltraPokémon',
     Email NVARCHAR(150) NOT NULL,
     PasswordHash NVARCHAR(MAX) NOT NULL,
-    Role NVARCHAR(20) NOT NULL DEFAULT N'Customer', -- 'Admin', 'Staff', 'Customer'
+    Role NVARCHAR(20) NOT NULL DEFAULT N'Customer', -- 'Admin', 'Staff', 'Customer', 'User'
     IsApproved BIT NOT NULL DEFAULT 1,              -- 1 = Đã duyệt, 0 = Bị khóa/Chờ duyệt
     AvatarUrl NVARCHAR(255) NULL,
     CONSTRAINT PK_Users PRIMARY KEY CLUSTERED (Id ASC),
-    CONSTRAINT UQ_Users_Email UNIQUE (Email)
+    CONSTRAINT UQ_Users_Email UNIQUE (Email),
+    -- [ĐÃ FIX] Giới hạn giá trị Role hợp lệ trong hệ thống
+    CONSTRAINT CK_Users_Role CHECK (Role IN (N'Admin', N'Staff', N'Customer', N'User'))
 );
 GO
 
@@ -54,9 +54,12 @@ CREATE TABLE dbo.Products (
     ElementType NVARCHAR(50) NOT NULL,          -- Hệ nguyên tố (Fire, Water, Electric...)
     Power INT NOT NULL DEFAULT 100,             -- Chỉ số sức mạnh tấn công (HP/Power)
     Price DECIMAL(18,2) NOT NULL DEFAULT 0.00,  -- Giá bán (VNĐ)
-    Description NVARCHAR(500) NOT NULL DEFAULT N'',
+    -- [ĐÃ FIX] Cho phép NULL để không lỗi khi thêm thẻ bài mới mà bỏ trống ô mô tả
+    Description NVARCHAR(500) NULL DEFAULT N'',
     Stock INT NOT NULL DEFAULT 10,              -- Số lượng tồn kho thực tế
     CONSTRAINT PK_Products PRIMARY KEY CLUSTERED (Id ASC),
+    -- [ĐÃ FIX] Ràng buộc ElementType phải thuộc danh mục Categories đã khai báo
+    CONSTRAINT FK_Products_Categories FOREIGN KEY (ElementType) REFERENCES dbo.Categories(Name) ON UPDATE CASCADE,
     CONSTRAINT CK_Products_Price CHECK (Price >= 0),
     CONSTRAINT CK_Products_Stock CHECK (Stock >= 0),
     CONSTRAINT CK_Products_Power CHECK (Power >= 0)
@@ -77,6 +80,8 @@ CREATE TABLE dbo.Orders (
     PaymentMethod NVARCHAR(50) NOT NULL DEFAULT N'Tiền mặt (COD)',
     Note NVARCHAR(500) NULL,                    -- Ghi chú của khách hàng (tùy chọn)
     CONSTRAINT PK_Orders PRIMARY KEY CLUSTERED (Id ASC),
+    -- [ĐÃ FIX] Liên kết UserEmail với bảng Users để đảm bảo đơn hàng thuộc tài khoản hợp lệ
+    CONSTRAINT FK_Orders_Users FOREIGN KEY (UserEmail) REFERENCES dbo.Users(Email) ON UPDATE CASCADE,
     CONSTRAINT CK_Orders_Status CHECK (Status IN (0, 1, 2, 3)),
     CONSTRAINT CK_Orders_TotalAmount CHECK (TotalAmount >= 0)
 );

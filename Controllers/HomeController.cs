@@ -29,7 +29,7 @@ public class HomeController : Controller
         return View();
     }
 
-    // [ĐÃ BỔ SUNG] Action xử lý ngoại lệ chung khi chạy môi trường Production (khớp với Program.cs)
+    // [ĐÃ FIX] Action xử lý ngoại lệ chung chuẩn tiếng Việt UTF-8
     public IActionResult Error()
     {
         TempData["Error"] = "Đã xảy ra lỗi hệ thống trong quá trình xử lý. Vui lòng thử lại!";

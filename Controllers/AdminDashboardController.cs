@@ -32,9 +32,10 @@ namespace UltraPokemon.Controllers
                 .Select(p => new { p.Id, p.Stock })
                 .ToListAsync();
 
+            // [ĐÃ FIX] Đếm cả Role "User" (tự đăng ký) và "Customer" (Admin tạo)
             var totalCustomers = await _context.Users
                 .AsNoTracking()
-                .CountAsync(u => u.Role == "User");
+                .CountAsync(u => u.Role == "User" || u.Role == "Customer");
 
             // 2. Tính toán các chỉ số KPI tổng quan
             var validOrders = allOrders.Where(o => o.Status != OrderStatus.Cancelled).ToList();

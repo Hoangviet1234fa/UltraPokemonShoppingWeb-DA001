@@ -31,13 +31,14 @@
                 </p>
 
                 <!-- Form tìm kiếm trực tiếp gửi sang ProductController/Index -->
+                <!--  Đổi name="searchString" thành name="search" khớp ProductController.Index -->
                 <form asp-controller="Product" asp-action="Index" method="get"
                       class="up-search-bar p-1 rounded-2 d-flex align-items-center mb-3" style="max-width: 540px;">
                     <span class="ps-3 pe-2 text-secondary">
                         <i class="bi bi-search"></i>
                     </span>
                     <input type="search"
-                           name="searchString"
+                           name="search"
                            class="form-control border-0 shadow-none bg-transparent text-dark"
                            placeholder="Nhập tên thẻ bài bạn đang tìm (VD: Charizard, Pikachu)..." />
                     <button type="submit" class="btn btn-dark fw-semibold px-4 text-nowrap rounded-2">
@@ -50,7 +51,8 @@
                     <span class="text-secondary me-1">Phổ biến:</span>
                     @foreach (var tag in popularTags)
                     {
-                        <a asp-controller="Product" asp-action="Index" asp-route-searchString="@tag"
+                        @* [ĐÃ FIX] Đổi asp-route-searchString thành asp-route-search *@
+                        <a asp-controller="Product" asp-action="Index" asp-route-search="@tag"
                            class="text-decoration-none px-2.5 py-1 rounded-2 up-popular-tag">
                             @tag
                         </a>
@@ -104,7 +106,7 @@
         </div>
     </section>
 
-    <!--   2. THANH TRA CỨU NHANH THEO HỆ NGUYÊN TỐ
+    <!-- 2. THANH TRA CỨU NHANH THEO HỆ NGUYÊN TỐ
          Thiết kế dạng thẻ lọc kỹ thuật gọn gàng, dùng chấm màu nhận diện hệ -->
     <section class="bg-white rounded-3 border p-3 px-4 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div class="d-flex align-items-center gap-2">
@@ -115,19 +117,20 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2">
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Fire" class="up-element-tab">
+            @*  Đổi asp-route-elementType thành asp-route-element khớp ProductController.Index *@
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Fire" class="up-element-tab">
                 <span class="up-dot dot-fire"></span> Hệ Lửa (Fire)
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Electric" class="up-element-tab">
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Electric" class="up-element-tab">
                 <span class="up-dot dot-electric"></span> Hệ Điện (Electric)
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Water" class="up-element-tab">
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Water" class="up-element-tab">
                 <span class="up-dot dot-water"></span> Hệ Nước (Water)
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Grass" class="up-element-tab">
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Grass" class="up-element-tab">
                 <span class="up-dot dot-grass"></span> Hệ Cỏ (Grass)
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-elementType="Rock" class="up-element-tab">
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Rock" class="up-element-tab">
                 <span class="up-dot dot-rock"></span> Hệ Đá (Rock)
             </a>
             <a asp-controller="Product" asp-action="Index" class="up-element-tab up-element-all">
@@ -136,7 +139,7 @@
         </div>
     </section>
 
-    <!--  3. DANH MỤC THẺ BÀI NỔI BẬT (HIỂN THỊ TỐI ĐA 8 THẺ TỪ MODEL)-->
+    <!-- 3. DANH MỤC THẺ BÀI NỔI BẬT (HIỂN THỊ TỐI ĐA 8 THẺ TỪ MODEL) -->
     <section class="bg-white rounded-3 border p-4 mb-4">
         <!-- Tiêu đề khu vực -->
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 pb-3 mb-4 border-bottom">
@@ -238,7 +241,7 @@
         }
     </section>
 
-    <!--  4. DẢI CAM KẾT DỊCH VỤ (GỘP 3 CỘT LIỀN MẠCH CÓ ĐƯỜNG NGĂN CÁCH)-->
+    <!-- 4. DẢI CAM KẾT DỊCH VỤ (GỘP 3 CỘT LIỀN MẠCH CÓ ĐƯỜNG NGĂN CÁCH) -->
     <section class="bg-white rounded-3 border overflow-hidden">
         <div class="row g-0">
             <!-- Cam kết 1 -->
@@ -284,7 +287,7 @@
 
 </div>
 
-<!--   CSS RIÊNG CHO TRANG CHỦ (ĐỒNG BỘ VỚI HỆ MÀU TRONG SITE.CSS)  -->
+<!-- CSS RIÊNG CHO TRANG CHỦ (ĐỒNG BỘ VỚI HỆ MÀU TRONG SITE.CSS) -->
 <style>
     /* Nền Hero tông trầm sang trọng, kết hợp họa tiết lưới kỹ thuật mờ */
     .up-hero {
