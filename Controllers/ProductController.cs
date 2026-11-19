@@ -17,9 +17,9 @@ namespace UltraPokemon.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
-        // ============================================================
+    
         // 1. DANH SÁCH THẺ BÀI (TÌM KIẾM + LỌC + SẮP XẾP + PHÂN TRANG)
-        // ============================================================
+        
         public async Task<IActionResult> Index(string? search, string? element, decimal? minPrice, decimal? maxPrice, string? sortOrder, int page = 1)
         {
             var query = _context.Products.AsQueryable();
@@ -97,9 +97,9 @@ namespace UltraPokemon.Controllers
             return View(products);
         }
 
-        // ============================================================
+      
         // 2. CHI TIẾT THẺ BÀI
-        // ============================================================
+        
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -120,9 +120,9 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
-        // ============================================================
+       
         // 3. THÊM THẺ BÀI MỚI (CHỈ ADMIN & STAFF)
-        // ============================================================
+        
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Create()
         {
@@ -179,9 +179,9 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
-        // ============================================================
+       
         // 4. CHỈNH SỬA THẺ BÀI (CHỈ ADMIN & STAFF)
-        // ============================================================
+        
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Edit(int? id)
         {
@@ -246,9 +246,9 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
-        // ============================================================
+        
         // 5. XÓA THẺ BÀI (CHỈ ADMIN)
-        // ============================================================
+    
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
@@ -278,9 +278,8 @@ namespace UltraPokemon.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ============================================================
         // HÀM HỖ TRỢ KIỂM TRA & LƯU FILE ẢNH VÀO WWWROOT/IMAGES/CARDS
-        // ============================================================
+  
         private async Task<string?> SaveImageAsync(IFormFile? imageFile)
         {
             if (imageFile == null || imageFile.Length == 0)
