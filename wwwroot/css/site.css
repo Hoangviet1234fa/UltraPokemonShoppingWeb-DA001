@@ -18,10 +18,11 @@ html {
 }
 
 body {
-    font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: var(--bg-obsidian);
-    color: #0f172a;
-    -webkit-font-smoothing: antialiased;
+    background-color: #0b1120;
+    background-image: linear-gradient(rgba(11, 17, 32, 0.82), rgba(11, 17, 32, 0.88)), url('/images/bg-space.jpg'); 
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
 }
 
 .brand {

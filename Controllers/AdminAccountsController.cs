@@ -92,12 +92,20 @@ namespace UltraPokemon.Controllers
         {
             ModelState.Remove("PasswordHash");
 
+            user.FullName = user.FullName?.Trim() ?? string.Empty;
+            user.Email = user.Email?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(user.Email) || !user.Email.EndsWith(".vn", StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError("Email", "Email phải hợp lệ và kết thúc bằng đuôi .vn.");
+            }
+
             if (string.IsNullOrWhiteSpace(rawPassword) || rawPassword.Length < 6)
             {
                 ModelState.AddModelError("rawPassword", "Mật khẩu phải có ít nhất 6 ký tự.");
             }
 
-            if (await _context.Users.AnyAsync(u => u.Email == user.Email))
+            if (await _context.Users.AnyAsync(u => u.Email.ToLower() == user.Email.ToLower()))
             {
                 ModelState.AddModelError("Email", "Email này đã tồn tại trong hệ thống.");
             }
@@ -135,7 +143,15 @@ namespace UltraPokemon.Controllers
             var existingUser = await _context.Users.FindAsync(id);
             if (existingUser == null) return NotFound();
 
-            if (await _context.Users.AnyAsync(u => u.Email == model.Email && u.Id != id))
+            model.FullName = model.FullName?.Trim() ?? string.Empty;
+            model.Email = model.Email?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(model.Email) || !model.Email.EndsWith(".vn", StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError("Email", "Email phải hợp lệ và kết thúc bằng đuôi .vn.");
+            }
+
+            if (await _context.Users.AnyAsync(u => u.Email.ToLower() == model.Email.ToLower() && u.Id != id))
             {
                 ModelState.AddModelError("Email", "Email này đã được sử dụng bởi tài khoản khác.");
             }

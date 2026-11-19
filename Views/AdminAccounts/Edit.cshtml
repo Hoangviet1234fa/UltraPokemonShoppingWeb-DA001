@@ -1,0 +1,72 @@
+﻿@model UltraPokemon.Models.User
+
+@{
+    ViewData["Title"] = "Chỉnh sửa tài khoản";
+}
+
+<div class="row justify-content-center py-3">
+    <div class="col-md-8 col-lg-6">
+        <div class="bg-white rounded-3 border shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa tài khoản
+                </h5>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                    &larr; Quay lại
+                </a>
+            </div>
+
+            <div class="p-4">
+                <form asp-action="Edit" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Id" />
+
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div asp-validation-summary="All" class="alert alert-danger py-2 small mb-3"></div>
+                    }
+
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label fw-semibold text-dark">Họ và tên <span class="text-danger">*</span></label>
+                        <input asp-for="FullName" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold text-dark">Email đăng nhập <span class="text-danger">*</span></label>
+                        <input asp-for="Email" type="email" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label fw-semibold text-dark">Đặt lại mật khẩu mới (tùy chọn)</label>
+                        <input type="password" id="newPassword" name="newPassword" class="form-control" minlength="6" placeholder="Để trống nếu giữ nguyên mật khẩu hiện tại..." />
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Role" class="form-label fw-semibold text-dark">Quyền hạn (Role)</label>
+                        <select asp-for="Role" class="form-select">
+                            <option value="Customer">Customer — Khách hàng</option>
+                            <option value="Staff">Staff — Nhân viên kho</option>
+                            <option value="Admin">Admin — Quản trị viên</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input asp-for="IsApproved" class="form-check-input" />
+                            <label asp-for="IsApproved" class="form-check-label fw-medium text-dark">
+                                Tài khoản đang hoạt động (Bỏ tích để khóa)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-light border px-4">Hủy bỏ</a>
+                        <button type="submit" class="btn btn-primary fw-semibold px-4">
+                            <i class="bi bi-save me-1"></i>Lưu thay đổi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
