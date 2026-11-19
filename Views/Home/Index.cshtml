@@ -17,11 +17,6 @@
 
             <!-- Cột trái: Tiêu đề chính, thanh tìm kiếm và từ khóa phổ biến -->
             <div class="col-lg-7">
-                <div class="d-inline-flex align-items-center gap-2 px-2.5 py-1 rounded-2 mb-3 up-eyebrow">
-                    <i class="bi bi-lightning-charge-fill text-warning"></i>
-                    <span>BỘ SƯU TẬP POKÉMON TCG 2026</span>
-                </div>
-
                 <h1 class="display-6 fw-bold mb-3 text-white" style="letter-spacing: -0.02em; line-height: 1.22;">
                     Cửa hàng <span class="text-warning">Thẻ bài Pokémon TCG</span> Chính Hãng
                 </h1>
@@ -31,7 +26,6 @@
                 </p>
 
                 <!-- Form tìm kiếm trực tiếp gửi sang ProductController/Index -->
-                <!--  Đổi name="searchString" thành name="search" khớp ProductController.Index -->
                 <form asp-controller="Product" asp-action="Index" method="get"
                       class="up-search-bar p-1 rounded-2 d-flex align-items-center mb-3" style="max-width: 540px;">
                     <span class="ps-3 pe-2 text-secondary">
@@ -51,7 +45,6 @@
                     <span class="text-secondary me-1">Phổ biến:</span>
                     @foreach (var tag in popularTags)
                     {
-                        @* [ĐÃ FIX] Đổi asp-route-searchString thành asp-route-search *@
                         <a asp-controller="Product" asp-action="Index" asp-route-search="@tag"
                            class="text-decoration-none px-2.5 py-1 rounded-2 up-popular-tag">
                             @tag
@@ -117,7 +110,6 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2">
-            @*  Đổi asp-route-elementType thành asp-route-element khớp ProductController.Index *@
             <a asp-controller="Product" asp-action="Index" asp-route-element="Fire" class="up-element-tab">
                 <span class="up-dot dot-fire"></span> Lửa (Fire)
             </a>
@@ -298,15 +290,6 @@
         background-image: radial-gradient(circle at 85% 20%, rgba(234, 179, 8, 0.12), transparent 45%), linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
         background-size: 100% 100%, 28px 28px, 28px 28px;
         border-color: rgba(255, 255, 255, 0.12) !important;
-    }
-
-    .up-eyebrow {
-        background: rgba(234, 179, 8, 0.12);
-        border: 1px solid rgba(234, 179, 8, 0.3);
-        color: #facc15;
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.06em;
     }
 
     .up-search-bar {
