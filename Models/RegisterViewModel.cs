@@ -7,8 +7,10 @@ namespace UltraPokemon.Models
         [Required(ErrorMessage = "Vui lòng nhập họ và tên")]
         public string FullName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Vui lòng nhập địa chỉ email")]
-        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        [Required(ErrorMessage = "Vui lòng nhập địa chỉ Email.")]
+        [EmailAddress(ErrorMessage = "Địa chỉ Email không hợp lệ.")]
+        [RegularExpression(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.vn$",
+            ErrorMessage = "Vui lòng sử dụng địa chỉ Email có đuôi .vn (ví dụ: tenban@ultrapokemon.vn).")]
         public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]

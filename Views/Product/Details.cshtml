@@ -14,8 +14,9 @@
     // Gọi Helper để lấy màu sắc Bootstrap tương ứng với Hệ (Ví dụ: Fire -> danger (đỏ), Water -> primary (xanh dương))
     var color = ElementHelper.Color(Model.ElementType);
 
-    // Tính toán phần trăm thanh sức mạnh (Power) tối đa là 200 để làm thanh Progress Bar
-    var powerPct = Math.Min(100, (int)Math.Round(Model.Power / 200.0 * 100));
+    // Tính toán phần trăm thanh sức mạnh (Power) theo mốc tối đa chuẩn thẻ Pokémon TCG là 340 để làm thanh Progress Bar
+    const double maxPower = 340.0;
+    var powerPct = Math.Clamp((int)Math.Round(Model.Power / maxPower * 100), 0, 100);
 }
 
 <div class="container mt-4">

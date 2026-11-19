@@ -1,4 +1,6 @@
+
 -- HỆ THỐNG CƠ SỞ DỮ LIỆU: ULTRAPOKÉMON CARD STORE (ASP.NET CORE MVC)
+
 
 -- 1. TẠO CƠ SỞ DỮ LIỆU
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = N'UltraPokemonDB')
@@ -33,15 +35,17 @@ GO
 -- BẢNG 2: USERS (TÀI KHOẢN NGƯỜI DÙNG & PHÂN QUYỀN HỆ THỐNG)
 CREATE TABLE dbo.Users (
     Id INT IDENTITY(1,1) NOT NULL,
+    Username NVARCHAR(50) NULL,
     FullName NVARCHAR(100) NOT NULL DEFAULT N'Thành viên UltraPokémon',
     Email NVARCHAR(150) NOT NULL,
     PasswordHash NVARCHAR(MAX) NOT NULL,
     Role NVARCHAR(20) NOT NULL DEFAULT N'Customer', -- 'Admin', 'Staff', 'Customer', 'User'
-    IsApproved BIT NOT NULL DEFAULT 1,              -- 1 = Đã duyệt, 0 = Bị khóa/Chờ duyệt
+    IsApproved BIT NOT NULL DEFAULT 1,              -- 1 = Đã duyệt, 0 = Chờ duyệt/Khóa
+    IsActive BIT NOT NULL DEFAULT 1,                -- 1 = Đang hoạt động, 0 = Bị vô hiệu hóa
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
     AvatarUrl NVARCHAR(255) NULL,
     CONSTRAINT PK_Users PRIMARY KEY CLUSTERED (Id ASC),
     CONSTRAINT UQ_Users_Email UNIQUE (Email),
-    -- [ĐÃ FIX] Giới hạn giá trị Role hợp lệ trong hệ thống
     CONSTRAINT CK_Users_Role CHECK (Role IN (N'Admin', N'Staff', N'Customer', N'User'))
 );
 GO
@@ -54,15 +58,13 @@ CREATE TABLE dbo.Products (
     ElementType NVARCHAR(50) NOT NULL,          -- Hệ nguyên tố (Fire, Water, Electric...)
     Power INT NOT NULL DEFAULT 100,             -- Chỉ số sức mạnh tấn công (HP/Power)
     Price DECIMAL(18,2) NOT NULL DEFAULT 0.00,  -- Giá bán (VNĐ)
-    -- [ĐÃ FIX] Cho phép NULL để không lỗi khi thêm thẻ bài mới mà bỏ trống ô mô tả
     Description NVARCHAR(500) NULL DEFAULT N'',
     Stock INT NOT NULL DEFAULT 10,              -- Số lượng tồn kho thực tế
     CONSTRAINT PK_Products PRIMARY KEY CLUSTERED (Id ASC),
-    -- [ĐÃ FIX] Ràng buộc ElementType phải thuộc danh mục Categories đã khai báo
     CONSTRAINT FK_Products_Categories FOREIGN KEY (ElementType) REFERENCES dbo.Categories(Name) ON UPDATE CASCADE,
     CONSTRAINT CK_Products_Price CHECK (Price >= 0),
     CONSTRAINT CK_Products_Stock CHECK (Stock >= 0),
-    CONSTRAINT CK_Products_Power CHECK (Power >= 0)
+    CONSTRAINT CK_Products_Power CHECK (Power >= 0 AND Power <= 10000)
 );
 GO
 
@@ -71,19 +73,20 @@ GO
 -- Quy ước IsPaid: 0 = Chưa thanh toán, 1 = Đã thanh toán
 CREATE TABLE dbo.Orders (
     Id INT IDENTITY(1001,1) NOT NULL,           -- Mã đơn bắt đầu từ 1001 (#ULTRA001001)
+    UserId INT NULL,                            -- Khóa ngoại tùy chọn liên kết tới Users(Id)
     UserEmail NVARCHAR(150) NOT NULL,           -- Email tài khoản đặt mua
     OrderDate DATETIME2 NOT NULL DEFAULT GETDATE(),
     TotalAmount DECIMAL(18,2) NOT NULL DEFAULT 0.00,
     Status INT NOT NULL DEFAULT 0,
-    IsPaid BIT NOT NULL DEFAULT 0,              -- [ĐÃ FIX] Trạng thái thanh toán (0 = Chưa thanh toán, 1 = Đã thanh toán)
+    IsPaid BIT NOT NULL DEFAULT 0,              -- Trạng thái thanh toán (0 = Chưa thanh toán, 1 = Đã thanh toán)
     FullName NVARCHAR(100) NOT NULL,            -- Họ tên người nhận hàng
     Address NVARCHAR(250) NOT NULL,             -- Địa chỉ giao hàng chi tiết
     PhoneNumber NVARCHAR(15) NOT NULL,          -- Số điện thoại liên hệ
     PaymentMethod NVARCHAR(50) NOT NULL DEFAULT N'Tiền mặt (COD)',
     Note NVARCHAR(500) NULL,                    -- Ghi chú của khách hàng (tùy chọn)
     CONSTRAINT PK_Orders PRIMARY KEY CLUSTERED (Id ASC),
-    -- [ĐÃ FIX] Liên kết UserEmail với bảng Users để đảm bảo đơn hàng thuộc tài khoản hợp lệ
-    CONSTRAINT FK_Orders_Users FOREIGN KEY (UserEmail) REFERENCES dbo.Users(Email) ON UPDATE CASCADE,
+    CONSTRAINT FK_Orders_Users_UserEmail FOREIGN KEY (UserEmail) REFERENCES dbo.Users(Email) ON UPDATE CASCADE,
+    CONSTRAINT FK_Orders_Users_UserId FOREIGN KEY (UserId) REFERENCES dbo.Users(Id) ON DELETE SET NULL,
     CONSTRAINT CK_Orders_Status CHECK (Status IN (0, 1, 2, 3)),
     CONSTRAINT CK_Orders_TotalAmount CHECK (TotalAmount >= 0)
 );
@@ -104,8 +107,9 @@ CREATE TABLE dbo.OrderDetails (
 );
 GO
 
--- 4. TẠO CÁC CHỈ MỤC (INDEXES) TỐI ƯU TỐC ĐỘ TÌẾM KIẾM & JOIN
+-- 4. TẠO CÁC CHỈ MỤC (INDEXES) TỐI ƯU TỐC ĐỘ TÌM KIẾM & JOIN
 CREATE NONCLUSTERED INDEX IX_Products_ElementType ON dbo.Products(ElementType);
+CREATE NONCLUSTERED INDEX IX_Orders_UserId ON dbo.Orders(UserId);
 CREATE NONCLUSTERED INDEX IX_Orders_UserEmail ON dbo.Orders(UserEmail);
 CREATE NONCLUSTERED INDEX IX_Orders_OrderDate ON dbo.Orders(OrderDate DESC);
 CREATE NONCLUSTERED INDEX IX_OrderDetails_OrderId ON dbo.OrderDetails(OrderId);
@@ -114,26 +118,31 @@ GO
 
 -- 5. NẠP TOÀN BỘ DỮ LIỆU MẪU (FULL SEED DATA)
 
--- 5.1 Danh mục hệ nguyên tố Pokémon
+-- 5.1 Danh mục hệ nguyên tố Pokémon (Đồng bộ đầy đủ với ElementHelper)
 SET IDENTITY_INSERT dbo.Categories ON;
 INSERT INTO dbo.Categories (Id, Name, Description) VALUES
-(1, N'Fire',     N'Thẻ bài Pokémon hệ Lửa rực cháy'),
-(2, N'Water',    N'Thẻ bài Pokémon hệ Nước linh hoạt'),
-(3, N'Electric', N'Thẻ bài Pokémon hệ Điện tốc độ cao'),
-(4, N'Rock',     N'Thẻ bài Pokémon hệ Đá phòng thủ vững chắc'),
-(5, N'Grass',    N'Thẻ bài Pokémon hệ Cỏ bền bỉ'),
-(6, N'Psychic',  N'Thẻ bài Pokémon hệ Tâm Linh huyền bí');
+(1,  N'Fire',      N'Thẻ bài Pokémon hệ Lửa rực cháy'),
+(2,  N'Water',     N'Thẻ bài Pokémon hệ Nước linh hoạt'),
+(3,  N'Electric',  N'Thẻ bài Pokémon hệ Điện tốc độ cao'),
+(4,  N'Rock',      N'Thẻ bài Pokémon hệ Đá phòng thủ vững chắc'),
+(5,  N'Grass',     N'Thẻ bài Pokémon hệ Cỏ bền bỉ'),
+(6,  N'Psychic',   N'Thẻ bài Pokémon hệ Tâm Linh huyền bí'),
+(7,  N'Fighting',  N'Thẻ bài Pokémon hệ Giác Đấu cận chiến mạnh mẽ'),
+(8,  N'Colorless', N'Thẻ bài Pokémon hệ Thường đa dụng'),
+(9,  N'Darkness',  N'Thẻ bài Pokémon hệ Bóng Tối bí ẩn'),
+(10, N'Metal',     N'Thẻ bài Pokémon hệ Thép phòng ngự kiên cố'),
+(11, N'Dragon',    N'Thẻ bài Pokémon hệ Rồng uy lực tối thượng');
 SET IDENTITY_INSERT dbo.Categories OFF;
 GO
 
 -- 5.2 Tài khoản mẫu phân quyền (Admin, Staff, Customer)
 -- Mật khẩu mặc định: 123456 (tự động đồng bộ hash chuẩn khi khởi chạy ứng dụng C#)
 SET IDENTITY_INSERT dbo.Users ON;
-INSERT INTO dbo.Users (Id, FullName, Email, PasswordHash, Role, IsApproved, AvatarUrl) VALUES
-(1, N'Quản Trị Viên',   N'admin@ultrapokemon.vn', N'SEED_SYNC_123456', N'Admin',    1, NULL),
-(2, N'Nhân Viên Kho',   N'staff@ultrapokemon.vn', N'SEED_SYNC_123456', N'Staff',    1, NULL),
-(3, N'Nguyễn Văn Huấn', N'user@ultrapokemon.com', N'SEED_SYNC_123456', N'Customer', 1, NULL),
-(4, N'Satoshi Ketchum', N'trainer.ash@gmail.com', N'SEED_SYNC_123456', N'Customer', 1, NULL);
+INSERT INTO dbo.Users (Id, Username, FullName, Email, PasswordHash, Role, IsApproved, IsActive, CreatedAt, AvatarUrl) VALUES
+(1, N'admin',       N'Quản Trị Viên',   N'admin@ultrapokemon.vn', N'SEED_SYNC_123456', N'Admin',    1, 1, '2026-11-01 08:00:00', NULL),
+(2, N'staff',       N'Nhân Viên Kho',   N'staff@ultrapokemon.vn', N'SEED_SYNC_123456', N'Staff',    1, 1, '2026-11-01 08:05:00', NULL),
+(3, N'huannguyen',  N'Nguyễn Văn Huấn', N'user@ultrapokemon.com', N'SEED_SYNC_123456', N'Customer', 1, 1, '2026-11-02 09:00:00', NULL),
+(4, N'satoshi',     N'Satoshi Ketchum', N'trainer.ash@gmail.com', N'SEED_SYNC_123456', N'Customer', 1, 1, '2026-11-02 09:30:00', NULL);
 SET IDENTITY_INSERT dbo.Users OFF;
 GO
 
@@ -157,11 +166,11 @@ GO
 
 -- 5.4 Đơn hàng mẫu (Phủ đủ 4 hình thức thanh toán, 4 trạng thái & trạng thái thanh toán IsPaid)
 SET IDENTITY_INSERT dbo.Orders ON;
-INSERT INTO dbo.Orders (Id, UserEmail, OrderDate, TotalAmount, Status, IsPaid, FullName, Address, PhoneNumber, PaymentMethod, Note) VALUES
-(1001, N'user@ultrapokemon.com', '2026-11-04 14:30:00', 600000.00, 0, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
-(1002, N'trainer.ash@gmail.com', '2026-11-04 16:45:00', 520000.00, 1, 1, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
-(1003, N'user@ultrapokemon.com', '2026-11-05 09:15:00', 190000.00, 2, 1, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Ví Momo', NULL),
-(1004, N'trainer.ash@gmail.com', '2026-11-06 10:20:00', 165000.00, 3, 0, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
+INSERT INTO dbo.Orders (Id, UserId, UserEmail, OrderDate, TotalAmount, Status, IsPaid, FullName, Address, PhoneNumber, PaymentMethod, Note) VALUES
+(1001, 3, N'user@ultrapokemon.com', '2026-11-04 14:30:00', 600000.00, 0, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
+(1002, 4, N'trainer.ash@gmail.com', '2026-11-04 16:45:00', 520000.00, 1, 1, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
+(1003, 3, N'user@ultrapokemon.com', '2026-11-05 09:15:00', 190000.00, 2, 1, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Ví Momo', NULL),
+(1004, 4, N'trainer.ash@gmail.com', '2026-11-06 10:20:00', 165000.00, 3, 0, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
 SET IDENTITY_INSERT dbo.Orders OFF;
 GO
 

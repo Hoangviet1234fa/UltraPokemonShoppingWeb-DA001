@@ -61,10 +61,7 @@
                         <div>@ViewBag.Error</div>
                     </div>
                 }
-                @if (!ViewData.ModelState.IsValid)
-                {
-                    <div asp-validation-summary="All" class="alert alert-danger border-0 bg-danger-subtle text-danger small py-2 rounded-3 mb-3"></div>
-                }
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger border-0 bg-danger-subtle text-danger small py-2 rounded-3 mb-3"></div>
 
                 <!-- Form Đăng ký -->
                 <form asp-controller="Account" asp-action="Register" method="post" id="registerForm">
@@ -84,6 +81,7 @@
                                    placeholder="Nguyễn Văn A"
                                    autocomplete="name" required />
                         </div>
+                        <span asp-validation-for="FullName" class="text-danger small d-block mt-1"></span>
                     </div>
 
                     <!-- Trường Email -->
@@ -97,9 +95,10 @@
                             </span>
                             <input asp-for="Email" id="regEmail"
                                    class="form-control border-start-0 ps-1"
-                                   placeholder="example@gmail.com"
+                                   placeholder="example@ultrapokemon.vn"
                                    autocomplete="email" required />
                         </div>
+                        <span asp-validation-for="Email" class="text-danger small d-block mt-1"></span>
                     </div>
 
                     <!-- Trường Mật khẩu -->
@@ -120,6 +119,7 @@
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
+                        <span asp-validation-for="Password" class="text-danger small d-block mt-1"></span>
                         <div class="progress mt-2" style="height: 4px;">
                             <div id="pwdStrengthBar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
                         </div>
@@ -143,6 +143,7 @@
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small d-block mt-1"></span>
                         <div id="pwdMatchHint" class="small mt-1"></div>
                     </div>
 
@@ -211,9 +212,14 @@
         border-radius: 10px;
         font-size: 0.95rem;
     }
+
+    .validation-summary-valid {
+        display: none !important;
+    }
 </style>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script>
         function togglePassword(inputId, btn) {
             const input = document.getElementById(inputId);
