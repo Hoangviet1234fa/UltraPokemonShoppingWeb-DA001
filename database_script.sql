@@ -1,4 +1,3 @@
-
 -- HỆ THỐNG CƠ SỞ DỮ LIỆU: ULTRAPOKÉMON CARD STORE (ASP.NET CORE MVC)
 
 
@@ -46,6 +45,7 @@ CREATE TABLE dbo.Users (
     AvatarUrl NVARCHAR(255) NULL,
     CONSTRAINT PK_Users PRIMARY KEY CLUSTERED (Id ASC),
     CONSTRAINT UQ_Users_Email UNIQUE (Email),
+    CONSTRAINT CK_Users_Email_VN CHECK (Email LIKE N'%@%.vn'),
     CONSTRAINT CK_Users_Role CHECK (Role IN (N'Admin', N'Staff', N'Customer', N'User'))
 );
 GO
@@ -135,54 +135,54 @@ INSERT INTO dbo.Categories (Id, Name, Description) VALUES
 SET IDENTITY_INSERT dbo.Categories OFF;
 GO
 
--- 5.2 Tài khoản mẫu phân quyền (Admin, Staff, Customer)
+-- 5.2 Tài khoản mẫu phân quyền (Đồng bộ định dạng đuôi .vn với Program.cs & RegisterViewModel)
 -- Mật khẩu mặc định: 123456 (tự động đồng bộ hash chuẩn khi khởi chạy ứng dụng C#)
 SET IDENTITY_INSERT dbo.Users ON;
 INSERT INTO dbo.Users (Id, Username, FullName, Email, PasswordHash, Role, IsApproved, IsActive, CreatedAt, AvatarUrl) VALUES
-(1, N'admin',       N'Quản Trị Viên',   N'admin@ultrapokemon.vn', N'SEED_SYNC_123456', N'Admin',    1, 1, '2026-11-01 08:00:00', NULL),
-(2, N'staff',       N'Nhân Viên Kho',   N'staff@ultrapokemon.vn', N'SEED_SYNC_123456', N'Staff',    1, 1, '2026-11-01 08:05:00', NULL),
-(3, N'huannguyen',  N'Nguyễn Văn Huấn', N'user@ultrapokemon.com', N'SEED_SYNC_123456', N'Customer', 1, 1, '2026-11-02 09:00:00', NULL),
-(4, N'satoshi',     N'Satoshi Ketchum', N'trainer.ash@gmail.com', N'SEED_SYNC_123456', N'Customer', 1, 1, '2026-11-02 09:30:00', NULL);
+(1, N'admin',      N'Quản Trị Viên',   N'admin@ultrapokemon.vn',    N'SEED_SYNC_123456', N'Admin',    1, 1, '2026-11-01 08:00:00', NULL),
+(2, N'staff',      N'Nhân Viên Kho',   N'staff@ultrapokemon.vn',    N'SEED_SYNC_123456', N'Staff',    1, 1, '2026-11-01 08:05:00', NULL),
+(3, N'satoshi',    N'Satoshi Ketchum', N'customer@ultrapokemon.vn', N'SEED_SYNC_123456', N'Customer', 1, 1, '2026-11-02 09:00:00', NULL),
+(4, N'huannguyen', N'Nguyễn Văn Huấn', N'user@ultrapokemon.vn',     N'SEED_SYNC_123456', N'Customer', 1, 1, '2026-11-02 09:30:00', NULL);
 SET IDENTITY_INSERT dbo.Users OFF;
 GO
 
--- 5.3 Danh sách 12 thẻ bài Pokémon mẫu
+-- 5.3 Danh sách 12 thẻ bài Pokémon mẫu (Đồng bộ tên phiên bản thẻ, HP và giá bán với Program.cs)
 SET IDENTITY_INSERT dbo.Products ON;
 INSERT INTO dbo.Products (Id, Name, ElementType, Power, Price, Stock, Description, ImageUrl) VALUES
-(1,  N'Charizard',  N'Fire',     200, 450000.00, 10, N'Lá bài lửa huyền thoại hệ rồng lửa, sức công phá vô song.', N'/images/Charizard.jpeg'),
-(2,  N'Blastoise',  N'Water',    180, 400000.00, 8,  N'Lá bài nước mạnh mẽ sở hữu 2 khẩu đại bác thủy lực dũng mãnh.', N'/images/Blastoise.png'),
-(3,  N'Raichu',     N'Electric', 150, 120000.00, 15, N'Lá bài điện chớp nhoáng với chiếc đuôi tích điện công suất lớn.', N'/images/raichu.jpg'),
-(4,  N'Jolteon',    N'Electric', 140, 90000.00,  12, N'Tiến hóa hệ điện của Eevee, lông gai phóng ra ngàn tia sét.', N'/images/Jolteon.jpg'),
-(5,  N'Onix',       N'Rock',     130, 60000.00,  20, N'Rắn đá khổng lồ hệ đất đá cứng cáp, phòng thủ tuyệt hảo.', N'/images/onix.jpg'),
-(6,  N'Pikachu',    N'Electric', 110, 150000.00, 25, N'Chú chuột điện vàng đáng yêu, biểu tượng của thế giới Pokémon.', N'/images/pikachu.png'),
-(7,  N'Vulpix',     N'Fire',     90,  50000.00,  18, N'Hồ ly lửa sáu đuôi xinh xắn, kiểm soát những đốm lửa ma trơi.', N'/images/Vulpix.png'),
-(8,  N'Psyduck',    N'Water',    95,  70000.00,  14, N'Vịt khờ hệ nước, bộc phát sức mạnh tâm linh kỳ bí khi đau đầu.', N'/images/psyduck.png'),
-(9,  N'Charmander', N'Fire',     100, 80000.00,  10, N'Khủng long lửa nhỏ với ngọn lửa luôn bùng cháy nơi chóp đuôi.', N'/images/Charmander.jpeg'),
-(10, N'Squirtle',   N'Water',    105, 85000.00,  12, N'Rùa nước tinh nghịch có mai rùa cứng cáp và khả năng bắn tia nước.', N'/images/squirtle.jpg'),
-(11, N'Diglett',    N'Rock',     80,  40000.00,  20, N'Pokémon chuột chũi di chuyển ngầm dưới lòng đất cực nhanh.', N'/images/Diglett.png'),
-(12, N'Sandshrew',  N'Rock',     85,  45000.00,  15, N'Tê tê cát hệ đất cuộn tròn mình lại để chống đỡ đòn đánh của kẻ địch.', N'/images/sandshrew.jpg');
+(1,  N'Charizard Holo', N'Fire',     200, 450000.00, 10, N'Thẻ bài hiếm Charizard Holo hệ lửa huyền thoại, hiệu ứng ánh kim toàn bề mặt.', N'/images/Charizard.jpeg'),
+(2,  N'Blastoise Holo', N'Water',    180, 400000.00, 8,  N'Thẻ bài hiếm Blastoise Holo sở hữu 2 khẩu đại bác thủy lực dũng mãnh.', N'/images/Blastoise.png'),
+(3,  N'Raichu Holo',    N'Electric', 150, 140000.00, 15, N'Thẻ bài Raichu Holo chớp nhoáng với chiếc đuôi tích điện công suất lớn.', N'/images/raichu.jpg'),
+(4,  N'Jolteon VMAX',   N'Electric', 260, 320000.00, 12, N'Thẻ bài siêu hiếm Jolteon VMAX 260 HP phóng ra ngàn tia sét Max Thunder Rumble.', N'/images/Jolteon.jpg'),
+(5,  N'Onix',           N'Rock',     130, 60000.00,  20, N'Rắn đá khổng lồ hệ đất đá cứng cáp, phòng thủ tuyệt hảo.', N'/images/onix.jpg'),
+(6,  N'Pikachu',        N'Electric', 110, 150000.00, 25, N'Chú chuột điện vàng đáng yêu, biểu tượng của thế giới Pokémon.', N'/images/pikachu.png'),
+(7,  N'Vulpix',         N'Fire',     90,  50000.00,  18, N'Hồ ly lửa sáu đuôi xinh xắn, kiểm soát những đốm lửa ma trơi.', N'/images/Vulpix.png'),
+(8,  N'Psyduck',        N'Water',    95,  70000.00,  14, N'Vịt khờ hệ nước, bộc phát sức mạnh tâm linh kỳ bí khi đau đầu.', N'/images/psyduck.png'),
+(9,  N'Charmander',     N'Fire',     100, 80000.00,  10, N'Khủng long lửa nhỏ với ngọn lửa luôn bùng cháy nơi chóp đuôi.', N'/images/Charmander.jpeg'),
+(10, N'Squirtle',       N'Water',    105, 85000.00,  12, N'Rùa nước tinh nghịch có mai rùa cứng cáp và khả năng bắn tia nước.', N'/images/squirtle.jpg'),
+(11, N'Diglett',        N'Rock',     80,  40000.00,  20, N'Pokémon chuột chũi di chuyển ngầm dưới lòng đất cực nhanh.', N'/images/Diglett.png'),
+(12, N'Sandshrew',      N'Rock',     85,  45000.00,  15, N'Tê tê cát hệ đất cuộn tròn mình lại để chống đỡ đòn đánh của kẻ địch.', N'/images/sandshrew.jpg');
 SET IDENTITY_INSERT dbo.Products OFF;
 GO
 
 -- 5.4 Đơn hàng mẫu (Phủ đủ 4 hình thức thanh toán, 4 trạng thái & trạng thái thanh toán IsPaid)
 SET IDENTITY_INSERT dbo.Orders ON;
 INSERT INTO dbo.Orders (Id, UserId, UserEmail, OrderDate, TotalAmount, Status, IsPaid, FullName, Address, PhoneNumber, PaymentMethod, Note) VALUES
-(1001, 3, N'user@ultrapokemon.com', '2026-11-04 14:30:00', 600000.00, 0, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
-(1002, 4, N'trainer.ash@gmail.com', '2026-11-04 16:45:00', 520000.00, 1, 1, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
-(1003, 3, N'user@ultrapokemon.com', '2026-11-05 09:15:00', 190000.00, 2, 1, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0912345678', N'Ví Momo', NULL),
-(1004, 4, N'trainer.ash@gmail.com', '2026-11-06 10:20:00', 165000.00, 3, 0, N'Trần Thị Lan',    N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
+(1001, 3, N'customer@ultrapokemon.vn', '2026-11-04 14:30:00', 600000.00, 0, 0, N'Satoshi Ketchum', N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
+(1002, 4, N'user@ultrapokemon.vn',     '2026-11-04 16:45:00', 540000.00, 1, 1, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
+(1003, 3, N'customer@ultrapokemon.vn', '2026-11-05 09:15:00', 420000.00, 2, 1, N'Satoshi Ketchum', N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0912345678', N'Ví Momo', NULL),
+(1004, 4, N'user@ultrapokemon.vn',     '2026-11-06 10:20:00', 165000.00, 3, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
 SET IDENTITY_INSERT dbo.Orders OFF;
 GO
 
 -- 5.5 Chi tiết sản phẩm từng đơn hàng
 SET IDENTITY_INSERT dbo.OrderDetails ON;
 INSERT INTO dbo.OrderDetails (Id, OrderId, ProductId, Quantity, UnitPrice) VALUES
-(1, 1001, 1, 1, 450000.00),
-(2, 1001, 6, 1, 150000.00),
-(3, 1002, 2, 1, 400000.00),
-(4, 1002, 3, 1, 120000.00),
-(5, 1003, 4, 1, 90000.00),
-(6, 1003, 7, 2, 50000.00),
+(1, 1001, 1,  1, 450000.00),
+(2, 1001, 6,  1, 150000.00),
+(3, 1002, 2,  1, 400000.00),
+(4, 1002, 3,  1, 140000.00),
+(5, 1003, 4,  1, 320000.00),
+(6, 1003, 7,  2, 50000.00),
 (7, 1004, 9,  1, 80000.00),
 (8, 1004, 10, 1, 85000.00);
 SET IDENTITY_INSERT dbo.OrderDetails OFF;

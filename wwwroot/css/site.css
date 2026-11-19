@@ -138,3 +138,15 @@ body {
 .validation-summary-valid {
     display: none !important;
 }
+/* Bù trừ chiều cao Navbar cố định để không che mất tiêu đề Hero */
+.hero-section,
+.hero-banner {
+    padding-top: 6.5rem !important;
+}
+
+@media (max-width: 768px) {
+    .hero-section,
+    .hero-banner {
+        padding-top: 5.5rem !important;
+    }
+}

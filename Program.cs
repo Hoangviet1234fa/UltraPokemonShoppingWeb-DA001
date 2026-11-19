@@ -72,10 +72,10 @@ using (var scope = app.Services.CreateScope())
     if (!context.Products.Any())
     {
         context.Products.AddRange(
-            new Product { Name = "Charizard", ElementType = "Fire", Power = 200, Price = 450000, Stock = 10, Description = "Lá bài lửa huyền thoại hệ rồng lửa, sức công phá vô song.", ImageUrl = "/images/Charizard.jpeg" },
-            new Product { Name = "Blastoise", ElementType = "Water", Power = 180, Price = 400000, Stock = 8, Description = "Lá bài nước mạnh mẽ sở hữu 2 khẩu đại bác thủy lực dũng mãnh.", ImageUrl = "/images/Blastoise.png" },
-            new Product { Name = "Raichu", ElementType = "Electric", Power = 150, Price = 120000, Stock = 15, Description = "Lá bài điện chớp nhoáng với chiếc đuôi tích điện công suất lớn.", ImageUrl = "/images/raichu.jpg" },
-            new Product { Name = "Jolteon", ElementType = "Electric", Power = 140, Price = 90000, Stock = 12, Description = "Tiến hóa hệ điện của Eevee, lông gai phóng ra ngàn tia sét.", ImageUrl = "/images/Jolteon.jpg" },
+            new Product { Name = "Charizard Holo", ElementType = "Fire", Power = 200, Price = 450000, Stock = 10, Description = "Thẻ bài hiếm Charizard Holo hệ lửa huyền thoại, hiệu ứng ánh kim toàn bề mặt.", ImageUrl = "/images/Charizard.jpeg" },
+            new Product { Name = "Blastoise Holo", ElementType = "Water", Power = 180, Price = 400000, Stock = 8, Description = "Thẻ bài hiếm Blastoise Holo sở hữu 2 khẩu đại bác thủy lực dũng mãnh.", ImageUrl = "/images/Blastoise.png" },
+            new Product { Name = "Raichu Holo", ElementType = "Electric", Power = 150, Price = 140000, Stock = 15, Description = "Thẻ bài Raichu Holo chớp nhoáng với chiếc đuôi tích điện công suất lớn.", ImageUrl = "/images/raichu.jpg" },
+            new Product { Name = "Jolteon VMAX", ElementType = "Electric", Power = 260, Price = 320000, Stock = 12, Description = "Thẻ bài siêu hiếm Jolteon VMAX 260 HP phóng ra ngàn tia sét Max Thunder Rumble.", ImageUrl = "/images/Jolteon.jpg" },
             new Product { Name = "Onix", ElementType = "Rock", Power = 130, Price = 60000, Stock = 20, Description = "Rắn đá khổng lồ hệ đất đá cứng cáp, phòng thủ tuyệt hảo.", ImageUrl = "/images/onix.jpg" },
             new Product { Name = "Pikachu", ElementType = "Electric", Power = 110, Price = 150000, Stock = 25, Description = "Chú chuột điện vàng đáng yêu, biểu tượng của thế giới Pokémon.", ImageUrl = "/images/pikachu.png" },
             new Product { Name = "Vulpix", ElementType = "Fire", Power = 90, Price = 50000, Stock = 18, Description = "Hồ ly lửa sáu đuôi xinh xắn, kiểm soát những đốm lửa ma trơi.", ImageUrl = "/images/Vulpix.png" },

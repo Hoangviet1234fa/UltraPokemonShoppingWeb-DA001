@@ -54,9 +54,8 @@
             {
                 <form asp-controller="Cart" asp-action="Add" method="post" class="flex-grow-1">
                     @Html.AntiForgeryToken()
-                    @* Đổi name="productId" thành name="id" và truyền returnUrl khớp CartController.Add *@
                     <input type="hidden" name="id" value="@Model.Id" />
-                    <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
                     <button type="submit" class="btn btn-dark btn-sm w-100 rounded-2 fw-medium">
                         Thêm vào giỏ
                     </button>
@@ -64,8 +63,8 @@
             }
             else
             {
-                <button class="btn btn-light text-muted border btn-sm flex-grow-1 rounded-2" disabled>
-                    Tạm hết
+                <button type="button" class="btn btn-light text-muted border btn-sm flex-grow-1 rounded-2" disabled>
+                    Hết hàng
                 </button>
             }
         </div>

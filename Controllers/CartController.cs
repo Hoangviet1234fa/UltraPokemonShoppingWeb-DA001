@@ -14,9 +14,9 @@ public class CartController : Controller
 
     public CartController(AppDbContext db) => _db = db;
 
-    
+
     // 1. QUẢN LÝ GIỎ HÀNG (XEM, THÊM, CẬP NHẬT SỐ LƯỢNG, XÓA, LÀM RỖNG)
-    
+
     public async Task<IActionResult> Index()
     {
         // Nếu khách quay lại giỏ hàng từ cổng thanh toán mà chưa xác nhận trả tiền -> hoàn đơn nháp & giữ nguyên giỏ
@@ -40,6 +40,15 @@ public class CartController : Controller
         var product = await _db.Products.FindAsync(id);
         if (product == null) return NotFound();
 
+        // Chặn ngay nếu sản phẩm đã hết hàng (Stock <= 0)
+        if (product.Stock <= 0)
+        {
+            TempData["Error"] = $"Sản phẩm \"{product.Name}\" hiện đã hết hàng!";
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+            return RedirectToAction("Index", "Product");
+        }
+
         var cart = CartSession.Get(HttpContext.Session);
         cart.TryGetValue(id, out var qty);
 
@@ -47,6 +56,8 @@ public class CartController : Controller
         if (qty + 1 > product.Stock)
         {
             TempData["Error"] = $"Không thể thêm. Cửa hàng chỉ còn {product.Stock} lá \"{product.Name}\".";
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
             return RedirectToAction("Index", "Product");
         }
 
@@ -103,9 +114,9 @@ public class CartController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    
+
     // 2. THANH TOÁN (CHECKOUT) & TẠO ĐƠN HÀNG (TRANSACTION)
-    
+
     [HttpGet]
     public async Task<IActionResult> Checkout()
     {
@@ -253,9 +264,9 @@ public class CartController : Controller
         }
     }
 
-    
+
     // 3. CÁC CỔNG THANH TOÁN TRỰC TUYẾN (MOMO & ATM / VISA)
-    
+
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> MomoPayment(int orderId)
