@@ -17,14 +17,14 @@ namespace UltraPokemon.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
-    
+
         // 1. DANH SÁCH THẺ BÀI (TÌM KIẾM + LỌC + SẮP XẾP + PHÂN TRANG)
-        
+
         public async Task<IActionResult> Index(string? search, string? element, decimal? minPrice, decimal? maxPrice, string? sortOrder, int page = 1)
         {
             var query = _context.Products.AsQueryable();
 
-            // 1. Tìm kiếm theo tên thẻ hoặc mô tả
+            // 1. Tìm kiếm theo tên thẻ hoặc mô tả (truy vấn SQL)
             if (!string.IsNullOrWhiteSpace(search))
             {
                 string keyword = search.Trim().ToLower();
@@ -32,45 +32,48 @@ namespace UltraPokemon.Controllers
                                       || (p.Description != null && p.Description.ToLower().Contains(keyword)));
             }
 
-            // 2. Lọc theo Hệ (ElementType)
+            // 2. Lọc theo Hệ (ElementType - truy vấn SQL)
             if (!string.IsNullOrWhiteSpace(element))
             {
                 query = query.Where(p => p.ElementType == element);
             }
 
-            // 3. Lọc theo khoảng giá
+            // Tải danh sách đã lọc từ SQLite sang bộ nhớ để xử lý decimal (lọc giá & sắp xếp) không bị lỗi NotSupportedException
+            var filteredList = await query.AsNoTracking().ToListAsync();
+
+            // 3. Lọc theo khoảng giá (LINQ to Objects)
             if (minPrice.HasValue)
             {
-                query = query.Where(p => p.Price >= minPrice.Value);
+                filteredList = filteredList.Where(p => p.Price >= minPrice.Value).ToList();
             }
             if (maxPrice.HasValue)
             {
-                query = query.Where(p => p.Price <= maxPrice.Value);
+                filteredList = filteredList.Where(p => p.Price <= maxPrice.Value).ToList();
             }
 
             // 4. Sắp xếp (khớp đầy đủ với các tùy chọn trên dropdown View)
-            query = sortOrder switch
+            filteredList = sortOrder switch
             {
-                "price_asc" => query.OrderBy(p => p.Price),
-                "price_desc" => query.OrderByDescending(p => p.Price),
-                "power_desc" => query.OrderByDescending(p => p.Power),
-                "name_asc" => query.OrderBy(p => p.Name),
-                "name_desc" => query.OrderByDescending(p => p.Name),
-                "newest" => query.OrderByDescending(p => p.Id),
-                _ => query.OrderBy(p => p.Name) // Mặc định sắp xếp A -> Z
+                "price_asc" => filteredList.OrderBy(p => p.Price).ToList(),
+                "price_desc" => filteredList.OrderByDescending(p => p.Price).ToList(),
+                "power_desc" => filteredList.OrderByDescending(p => p.Power).ToList(),
+                "name_asc" => filteredList.OrderBy(p => p.Name).ToList(),
+                "name_desc" => filteredList.OrderByDescending(p => p.Name).ToList(),
+                "newest" => filteredList.OrderByDescending(p => p.Id).ToList(),
+                _ => filteredList.OrderBy(p => p.Name).ToList() // Mặc định sắp xếp A -> Z
             };
 
             // 5. Phân trang với LINQ Skip / Take
             int pageSize = 8;
             if (page < 1) page = 1;
-            int totalItems = await query.CountAsync();
+            int totalItems = filteredList.Count;
             int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
             if (totalPages > 0 && page > totalPages) page = totalPages;
 
-            var products = await query
+            var products = filteredList
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToList();
 
             // Truyền lại các tham số để giữ trạng thái trên thanh lọc & phân trang
             ViewBag.Search = search;
@@ -97,9 +100,9 @@ namespace UltraPokemon.Controllers
             return View(products);
         }
 
-      
+
         // 2. CHI TIẾT THẺ BÀI
-        
+
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -120,9 +123,9 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
-       
+
         // 3. THÊM THẺ BÀI MỚI (CHỈ ADMIN & STAFF)
-        
+
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Create()
         {
@@ -179,9 +182,9 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
-       
+
         // 4. CHỈNH SỬA THẺ BÀI (CHỈ ADMIN & STAFF)
-        
+
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> Edit(int? id)
         {
@@ -246,9 +249,9 @@ namespace UltraPokemon.Controllers
             return View(product);
         }
 
-        
+
         // 5. XÓA THẺ BÀI (CHỈ ADMIN)
-    
+
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
@@ -279,7 +282,7 @@ namespace UltraPokemon.Controllers
         }
 
         // HÀM HỖ TRỢ KIỂM TRA & LƯU FILE ẢNH VÀO WWWROOT/IMAGES/CARDS
-  
+
         private async Task<string?> SaveImageAsync(IFormFile? imageFile)
         {
             if (imageFile == null || imageFile.Length == 0)
