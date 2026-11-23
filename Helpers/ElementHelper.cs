@@ -9,7 +9,8 @@ public static class ElementHelper
         return el.Contains("lua") || el.Contains("fire") ? "danger" :
                el.Contains("nuoc") || el.Contains("water") ? "primary" :
                el.Contains("set") || el.Contains("electric") ? "warning" :
-               el.Contains("dat") || el.Contains("grass") || el.Contains("rock") ? "success" : "secondary";
+               el.Contains("dat") || el.Contains("grass") || el.Contains("rock") ? "success" :
+               el.Contains("tam linh") || el.Contains("psychic") ? "info" : "secondary";
     }
 
     public static string Button(string? element, bool active) =>
