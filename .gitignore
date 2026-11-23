@@ -74,7 +74,6 @@ nunit-*.xml
 
 ## 7. FILE CƠ SỞ DỮ LIỆU CỤC BỘ (QUAN TRỌNG)
 # Chặn các file database SQLite và SQL Server để không bị đẩy lên Git (tránh ghi đè dữ liệu test)
-*.db
 *.db-shm
 *.db-wal
 *.mdf
