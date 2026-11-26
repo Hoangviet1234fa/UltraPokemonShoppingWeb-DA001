@@ -68,12 +68,11 @@ CREATE TABLE dbo.Products (
 );
 GO
 
--- BẢNG 4: ORDERS (HÓA ĐƠN ĐẶT HÀNG CỦA KHÁCH)
+-- BẢNG 4: ORDERS (HÓA ĐƠN ĐẶT HÀNG CỦA KHÁCH - ĐỒNG BỘ 100% VỚI Models/Order.cs)
 -- Quy ước Status: 0 = Pending, 1 = Shipping, 2 = Completed, 3 = Cancelled
 -- Quy ước IsPaid: 0 = Chưa thanh toán, 1 = Đã thanh toán
 CREATE TABLE dbo.Orders (
-    Id INT IDENTITY(1001,1) NOT NULL,           -- Mã đơn bắt đầu từ 1001 (#ULTRA001001)
-    UserId INT NULL,                            -- Khóa ngoại tùy chọn liên kết tới Users(Id)
+    Id INT IDENTITY(1,1) NOT NULL,              -- Mã đơn bắt đầu từ 1 (#ULTRA000001) khớp với ứng dụng
     UserEmail NVARCHAR(150) NOT NULL,           -- Email tài khoản đặt mua
     OrderDate DATETIME2 NOT NULL DEFAULT GETDATE(),
     TotalAmount DECIMAL(18,2) NOT NULL DEFAULT 0.00,
@@ -86,7 +85,6 @@ CREATE TABLE dbo.Orders (
     Note NVARCHAR(500) NULL,                    -- Ghi chú của khách hàng (tùy chọn)
     CONSTRAINT PK_Orders PRIMARY KEY CLUSTERED (Id ASC),
     CONSTRAINT FK_Orders_Users_UserEmail FOREIGN KEY (UserEmail) REFERENCES dbo.Users(Email) ON UPDATE CASCADE,
-    CONSTRAINT FK_Orders_Users_UserId FOREIGN KEY (UserId) REFERENCES dbo.Users(Id) ON DELETE SET NULL,
     CONSTRAINT CK_Orders_Status CHECK (Status IN (0, 1, 2, 3)),
     CONSTRAINT CK_Orders_TotalAmount CHECK (TotalAmount >= 0)
 );
@@ -118,7 +116,7 @@ CREATE TABLE dbo.Reviews (
     Comment NVARCHAR(500) NOT NULL,
     CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_Reviews PRIMARY KEY CLUSTERED (Id ASC),
-    CONSTRAINT UQ_Reviews_OrderId_ProductId UNIQUE (OrderId, ProductId), -- Chặn đánh giá trùng 1 sản phẩm trong cùng 1 đơn
+    CONSTRAINT UQ_Reviews_OrderId_ProductId UNIQUE (OrderId, ProductId),
     CONSTRAINT FK_Reviews_Products FOREIGN KEY (ProductId) REFERENCES dbo.Products(Id) ON DELETE CASCADE,
     CONSTRAINT FK_Reviews_Orders FOREIGN KEY (OrderId) REFERENCES dbo.Orders(Id) ON DELETE NO ACTION,
     CONSTRAINT CK_Reviews_Rating CHECK (Rating >= 1 AND Rating <= 5)
@@ -127,7 +125,6 @@ GO
 
 -- 4. TẠO CÁC CHỈ MỤC (INDEXES) TỐI ƯU TỐC ĐỘ TÌM KIẾM & JOIN
 CREATE NONCLUSTERED INDEX IX_Products_ElementType ON dbo.Products(ElementType);
-CREATE NONCLUSTERED INDEX IX_Orders_UserId ON dbo.Orders(UserId);
 CREATE NONCLUSTERED INDEX IX_Orders_UserEmail ON dbo.Orders(UserEmail);
 CREATE NONCLUSTERED INDEX IX_Orders_OrderDate ON dbo.Orders(OrderDate DESC);
 CREATE NONCLUSTERED INDEX IX_OrderDetails_OrderId ON dbo.OrderDetails(OrderId);
@@ -138,7 +135,7 @@ GO
 
 -- 5. NẠP TOÀN BỘ DỮ LIỆU MẪU (FULL SEED DATA)
 
--- 5.1 [ĐÃ CẬP NHẬT] Danh mục hệ nguyên tố Pokémon đồng bộ 100% tiếng Việt
+-- 5.1 Danh mục hệ nguyên tố Pokémon đồng bộ 100% tiếng Việt
 SET IDENTITY_INSERT dbo.Categories ON;
 INSERT INTO dbo.Categories (Id, Name, Description) VALUES
 (1,  N'Lửa',       N'Thẻ bài Pokémon hệ Lửa rực cháy'),
@@ -155,8 +152,7 @@ INSERT INTO dbo.Categories (Id, Name, Description) VALUES
 SET IDENTITY_INSERT dbo.Categories OFF;
 GO
 
--- 5.2 Tài khoản mẫu phân quyền (Đồng bộ định dạng đuôi .vn với Program.cs & RegisterViewModel)
--- Mật khẩu mặc định: 123456 (tự động đồng bộ hash chuẩn khi khởi chạy ứng dụng C#)
+-- 5.2 Tài khoản mẫu phân quyền
 SET IDENTITY_INSERT dbo.Users ON;
 INSERT INTO dbo.Users (Id, Username, FullName, Email, PasswordHash, Role, IsApproved, IsActive, CreatedAt, AvatarUrl) VALUES
 (1, N'admin',      N'Quản Trị Viên',   N'admin@ultrapokemon.vn',    N'SEED_SYNC_123456', N'Admin',    1, 1, '2026-11-01 08:00:00', NULL),
@@ -166,7 +162,7 @@ INSERT INTO dbo.Users (Id, Username, FullName, Email, PasswordHash, Role, IsAppr
 SET IDENTITY_INSERT dbo.Users OFF;
 GO
 
--- 5.3 [ĐÃ CẬP NHẬT] Danh sách 15 thẻ bài Pokémon mẫu (Đồng bộ ElementType tiếng Việt & bổ sung hệ Tâm linh)
+-- 5.3 Danh sách 15 thẻ bài Pokémon mẫu
 SET IDENTITY_INSERT dbo.Products ON;
 INSERT INTO dbo.Products (Id, Name, ElementType, Power, Price, Stock, Description, ImageUrl) VALUES
 (1,  N'Charizard Holo', N'Lửa',      200, 450000.00, 10, N'Thẻ bài hiếm Charizard Holo hệ lửa huyền thoại, hiệu ứng ánh kim toàn bề mặt.', N'/images/Charizard.jpeg'),
@@ -187,35 +183,35 @@ INSERT INTO dbo.Products (Id, Name, ElementType, Power, Price, Stock, Descriptio
 SET IDENTITY_INSERT dbo.Products OFF;
 GO
 
--- 5.4 Đơn hàng mẫu (Phủ đủ 4 hình thức thanh toán, 4 trạng thái & trạng thái thanh toán IsPaid)
+-- 5.4 Đơn hàng mẫu (ID bắt đầu từ 1 khớp với IDENTITY(1,1))
 SET IDENTITY_INSERT dbo.Orders ON;
-INSERT INTO dbo.Orders (Id, UserId, UserEmail, OrderDate, TotalAmount, Status, IsPaid, FullName, Address, PhoneNumber, PaymentMethod, Note) VALUES
-(1001, 3, N'customer@ultrapokemon.vn', '2026-11-04 14:30:00', 600000.00, 0, 0, N'Satoshi Ketchum', N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
-(1002, 4, N'user@ultrapokemon.vn',     '2026-11-04 16:45:00', 540000.00, 1, 1, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
-(1003, 3, N'customer@ultrapokemon.vn', '2026-11-05 09:15:00', 420000.00, 2, 1, N'Satoshi Ketchum', N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0912345678', N'Ví Momo', NULL),
-(1004, 4, N'user@ultrapokemon.vn',     '2026-11-06 10:20:00', 165000.00, 3, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
+INSERT INTO dbo.Orders (Id, UserEmail, OrderDate, TotalAmount, Status, IsPaid, FullName, Address, PhoneNumber, PaymentMethod, Note) VALUES
+(1, N'customer@ultrapokemon.vn', '2026-11-04 14:30:00', 600000.00, 0, 0, N'Satoshi Ketchum', N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0912345678', N'Tiền mặt (COD)', N'Giao giờ hành chính giúp mình nhé.'),
+(2, N'user@ultrapokemon.vn',     '2026-11-04 16:45:00', 540000.00, 1, 1, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0987654321', N'Chuyển khoản Ngân hàng (ATM)', N'Bọc chống sốc kỹ cho thẻ bài.'),
+(3, N'customer@ultrapokemon.vn', '2026-11-05 09:15:00', 420000.00, 2, 1, N'Satoshi Ketchum', N'45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', N'0912345678', N'Ví Momo', NULL),
+(4, N'user@ultrapokemon.vn',     '2026-11-06 10:20:00', 165000.00, 3, 0, N'Nguyễn Văn Huấn', N'123 Đường Cầu Giấy, Hà Nội', N'0987654321', N'Visa Card', N'Khách báo đổi ý đặt sang bộ khác.');
 SET IDENTITY_INSERT dbo.Orders OFF;
 GO
 
 -- 5.5 Chi tiết sản phẩm từng đơn hàng
 SET IDENTITY_INSERT dbo.OrderDetails ON;
 INSERT INTO dbo.OrderDetails (Id, OrderId, ProductId, Quantity, UnitPrice) VALUES
-(1, 1001, 1,  1, 450000.00),
-(2, 1001, 6,  1, 150000.00),
-(3, 1002, 2,  1, 400000.00),
-(4, 1002, 3,  1, 140000.00),
-(5, 1003, 4,  1, 320000.00),
-(6, 1003, 7,  2, 50000.00),
-(7, 1004, 9,  1, 80000.00),
-(8, 1004, 10, 1, 85000.00);
+(1, 1, 1,  1, 450000.00),
+(2, 1, 6,  1, 150000.00),
+(3, 2, 2,  1, 400000.00),
+(4, 2, 3,  1, 140000.00),
+(5, 3, 4,  1, 320000.00),
+(6, 3, 7,  2, 50000.00),
+(7, 4, 9,  1, 80000.00),
+(8, 4, 10, 1, 85000.00);
 SET IDENTITY_INSERT dbo.OrderDetails OFF;
 GO
 
--- 5.6 Đánh giá sản phẩm mẫu 
+-- 5.6 Đánh giá sản phẩm mẫu (Gắn với đơn hàng đã hoàn thành #3 của Satoshi Ketchum)
 SET IDENTITY_INSERT dbo.Reviews ON;
 INSERT INTO dbo.Reviews (Id, ProductId, OrderId, ReviewerName, ReviewerEmail, Rating, Comment, CreatedAt) VALUES
-(1, 4, 1003, N'Satoshi Ketchum', N'customer@ultrapokemon.vn', 5, N'Thẻ chính hãng, in sắc nét. Shop lồng sleeve và kẹp khung cứng chống gập rất cẩn thận.', '2026-11-06 15:20:00'),
-(2, 7, 1003, N'Satoshi Ketchum', N'customer@ultrapokemon.vn', 5, N'Thẻ mới đẹp, không trầy xước. Giao hàng nhanh đúng hẹn.', '2026-11-06 15:25:00');
+(1, 4, 3, N'Satoshi Ketchum', N'customer@ultrapokemon.vn', 5, N'Thẻ chính hãng, in sắc nét. Shop lồng sleeve và kẹp khung cứng chống gập rất cẩn thận.', '2026-11-06 15:20:00'),
+(2, 7, 3, N'Satoshi Ketchum', N'customer@ultrapokemon.vn', 5, N'Thẻ mới đẹp, không trầy xước. Giao hàng nhanh đúng hẹn.', '2026-11-06 15:25:00');
 SET IDENTITY_INSERT dbo.Reviews OFF;
 GO
 

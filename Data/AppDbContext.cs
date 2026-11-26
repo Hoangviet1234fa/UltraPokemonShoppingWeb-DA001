@@ -20,10 +20,26 @@ namespace UltraPokemon.Data
         // Khai báo bảng Reviews trong Entity Framework Core
         public DbSet<Review> Reviews { get; set; }
 
-        // Cấu hình khóa ngoại và ràng buộc chống đánh giá trùng lặp
+        // Cấu hình khóa ngoại và ràng buộc toàn vẹn dữ liệu
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Ràng buộc duy nhất (Unique) trên Categories.Name để làm khóa chính thay thế cho khóa ngoại
+            modelBuilder.Entity<Category>(entity =>
+            {
+                entity.HasAlternateKey(c => c.Name);
+            });
+
+            // Khớp khóa ngoại Products(ElementType) -> Categories(Name) đồng bộ với database_script.sql
+            modelBuilder.Entity<Product>(entity =>
+            {
+                entity.HasOne<Category>()
+                      .WithMany()
+                      .HasForeignKey(p => p.ElementType)
+                      .HasPrincipalKey(c => c.Name)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
 
             modelBuilder.Entity<Review>(entity =>
             {

@@ -156,6 +156,8 @@ namespace UltraPokemon.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ElementType");
+
                     b.ToTable("Products");
                 });
 
@@ -269,6 +271,16 @@ namespace UltraPokemon.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("UltraPokemon.Models.Product", b =>
+                {
+                    b.HasOne("UltraPokemon.Models.Category", null)
+                        .WithMany()
+                        .HasForeignKey("ElementType")
+                        .HasPrincipalKey("Name")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("UltraPokemon.Models.Review", b =>

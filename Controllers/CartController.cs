@@ -319,7 +319,7 @@ public class CartController : Controller
     }
 
 
-    // 4. LỊCH SỬ ĐƠN HÀNG & HỦY ĐƠN CHỜ DUYỆT (HOÀN KHO)
+    // 4. LỊCH SỬ ĐƠN HÀNG & HỦY ĐƠN CHỜ DUYỆT (CHỐNG HOÀN KHO 2 LẦN KHI TRANH CHẤP ĐỒNG THỜI)
 
     [HttpGet]
     [Authorize]
@@ -341,7 +341,7 @@ public class CartController : Controller
             .OrderByDescending(o => o.OrderDate)
             .ToListAsync();
 
-        //  Lấy danh sách khóa "OrderId_ProductId" đã được khách hàng đánh giá
+        // Lấy danh sách khóa "OrderId_ProductId" đã được khách hàng đánh giá
         // để hiển thị trạng thái "Đã đánh giá" thay vì nút "Đánh giá" trên giao diện MyOrders
         var orderIds = orders.Select(o => o.Id).ToList();
         var reviewedKeys = await _db.Reviews
@@ -360,40 +360,53 @@ public class CartController : Controller
     public async Task<IActionResult> CancelMyOrder(int id)
     {
         var userEmail = User.Identity!.Name!;
-        var order = await _db.Orders
-            .Include(o => o.OrderDetails)
-            .ThenInclude(od => od.Product)
+        var orderInfo = await _db.Orders
+            .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == id && o.UserEmail == userEmail);
 
-        if (order == null) return NotFound();
+        if (orderInfo == null) return NotFound();
 
         // Chỉ cho phép khách tự hủy khi đơn còn ở trạng thái Chờ duyệt
-        if (order.Status != OrderStatus.Pending)
+        if (orderInfo.Status != OrderStatus.Pending)
         {
-            TempData["Error"] = $"Đơn hàng {order.OrderCode} đã được xử lý hoặc đang giao, không thể tự hủy!";
+            TempData["Error"] = $"Đơn hàng {orderInfo.OrderCode} đã được xử lý hoặc đang giao, không thể tự hủy!";
             return RedirectToAction(nameof(MyOrders));
         }
 
         using var transaction = await _db.Database.BeginTransactionAsync();
         try
         {
-            // Hoàn trả số lượng sản phẩm về kho
-            foreach (var detail in order.OrderDetails)
+            // Cập nhật nguyên tử có điều kiện trực tiếp dưới SQL (Atomic Update):
+            // Chỉ chuyển sang Cancelled nếu đúng đơn của khách và trạng thái vẫn đang là Pending
+            int affectedRows = await _db.Orders
+                .Where(o => o.Id == id && o.UserEmail == userEmail && o.Status == OrderStatus.Pending)
+                .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, OrderStatus.Cancelled));
+
+            // Nếu affectedRows == 0 nghĩa là Admin vừa duyệt hoặc hủy đơn này trước đó 1 mili-giây -> dừng lại, chống hoàn kho 2 lần
+            if (affectedRows == 0)
             {
-                if (detail.Product != null)
-                {
-                    detail.Product.Stock += detail.Quantity;
-                    _db.Products.Update(detail.Product);
-                }
+                await transaction.RollbackAsync();
+                TempData["Error"] = $"Đơn hàng {orderInfo.OrderCode} đã được xử lý hoặc đã hủy trước đó!";
+                return RedirectToAction(nameof(MyOrders));
             }
 
-            order.Status = OrderStatus.Cancelled;
-            _db.Orders.Update(order);
+            // Chỉ luồng duy nhất cập nhật trạng thái thành công (affectedRows == 1) mới được cộng hoàn trả tồn kho
+            var orderDetails = await _db.OrderDetails
+                .AsNoTracking()
+                .Where(od => od.OrderId == id)
+                .Select(od => new { od.ProductId, od.Quantity })
+                .ToListAsync();
 
-            await _db.SaveChangesAsync();
+            foreach (var detail in orderDetails)
+            {
+                await _db.Products
+                    .Where(p => p.Id == detail.ProductId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + detail.Quantity));
+            }
+
             await transaction.CommitAsync();
 
-            TempData["Success"] = $"Đã hủy đơn hàng {order.OrderCode} và hoàn trả số lượng sản phẩm về kho.";
+            TempData["Success"] = $"Đã hủy đơn hàng {orderInfo.OrderCode} và hoàn trả số lượng sản phẩm về kho.";
         }
         catch (Exception ex)
         {

@@ -87,12 +87,74 @@ namespace UltraPokemon.Controllers
         }
 
 
-        // 3. CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG (TỰ ĐỘNG HOÀN KHO KHI HỦY ĐƠN)
+        // 3. CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG (TỰ ĐỘNG HOÀN KHO NGUYÊN TỬ KHI HỦY ĐƠN)
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateStatus(int id, OrderStatus newStatus)
         {
+            // Nhánh Admin/Staff hủy đơn: cập nhật nguyên tử có điều kiện dưới SQL để chống hoàn kho 2 lần
+            // khi khách hàng cũng bấm hủy đơn tại cùng một thời điểm (Concurrency)
+            if (newStatus == OrderStatus.Cancelled)
+            {
+                var orderInfo = await _context.Orders
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(o => o.Id == id);
+
+                if (orderInfo == null) return NotFound();
+
+                // Khóa không cho sửa nếu đơn đã Hoàn thành hoặc Đã hủy
+                if (orderInfo.Status == OrderStatus.Cancelled || orderInfo.Status == OrderStatus.Completed)
+                {
+                    TempData["Error"] = "Đơn hàng đã hoàn tất hoặc đã hủy nên không thể thay đổi trạng thái.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // Chỉ chuyển sang Cancelled nếu đơn chưa bị hủy và chưa hoàn tất
+                    int affectedRows = await _context.Orders
+                        .Where(o => o.Id == id
+                                 && o.Status != OrderStatus.Cancelled
+                                 && o.Status != OrderStatus.Completed)
+                        .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, OrderStatus.Cancelled));
+
+                    // Nếu affectedRows == 0 nghĩa là khách hàng vừa tự hủy đơn này trước đó 1 mili-giây -> chặn cộng kho lần 2
+                    if (affectedRows == 0)
+                    {
+                        await transaction.RollbackAsync();
+                        TempData["Error"] = "Đơn hàng đã hoàn tất hoặc đã bị khách hàng hủy trước đó nên không thể thay đổi trạng thái.";
+                        return RedirectToAction(nameof(Details), new { id });
+                    }
+
+                    // Cộng hoàn trả số lượng thẻ bài vào kho nguyên tử (Stock = Stock + Quantity)
+                    var orderDetails = await _context.OrderDetails
+                        .AsNoTracking()
+                        .Where(od => od.OrderId == id)
+                        .Select(od => new { od.ProductId, od.Quantity })
+                        .ToListAsync();
+
+                    foreach (var detail in orderDetails)
+                    {
+                        await _context.Products
+                            .Where(p => p.Id == detail.ProductId)
+                            .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + detail.Quantity));
+                    }
+
+                    await transaction.CommitAsync();
+                    TempData["Success"] = $"Đã cập nhật trạng thái đơn hàng {orderInfo.OrderCode} thành công!";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    TempData["Error"] = "Có lỗi xảy ra khi hủy đơn hàng. Vui lòng thử lại!";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+            }
+
+            // Các trạng thái khác (Pending -> Shipping -> Completed): giữ nguyên luồng xử lý gốc
             var order = await _context.Orders
                 .Include(o => o.OrderDetails)
                 .FirstOrDefaultAsync(o => o.Id == id);
@@ -104,19 +166,6 @@ namespace UltraPokemon.Controllers
             {
                 TempData["Error"] = "Đơn hàng đã hoàn tất hoặc đã hủy nên không thể thay đổi trạng thái.";
                 return RedirectToAction(nameof(Details), new { id });
-            }
-
-            // Nếu Admin/Staff chọn Hủy đơn -> Cộng hoàn trả số lượng thẻ bài vào kho
-            if (newStatus == OrderStatus.Cancelled && order.Status != OrderStatus.Cancelled)
-            {
-                foreach (var detail in order.OrderDetails)
-                {
-                    var product = await _context.Products.FindAsync(detail.ProductId);
-                    if (product != null)
-                    {
-                        product.Stock += detail.Quantity;
-                    }
-                }
             }
 
             if (newStatus == OrderStatus.Completed) order.IsPaid = true;
