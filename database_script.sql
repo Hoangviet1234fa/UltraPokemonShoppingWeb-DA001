@@ -55,7 +55,7 @@ CREATE TABLE dbo.Products (
     Id INT IDENTITY(1,1) NOT NULL,
     Name NVARCHAR(100) NOT NULL,
     ImageUrl NVARCHAR(255) NOT NULL DEFAULT N'',
-    ElementType NVARCHAR(50) NOT NULL,          -- Hệ nguyên tố (Fire, Water, Electric...)
+    ElementType NVARCHAR(50) NOT NULL,          -- Hệ nguyên tố tiếng Việt (Lửa, Nước, Điện, Đá, Cỏ, Tâm linh...)
     Power INT NOT NULL DEFAULT 100,             -- Chỉ số sức mạnh tấn công (HP/Power)
     Price DECIMAL(18,2) NOT NULL DEFAULT 0.00,  -- Giá bán (VNĐ)
     Description NVARCHAR(500) NULL DEFAULT N'',
@@ -118,20 +118,20 @@ GO
 
 -- 5. NẠP TOÀN BỘ DỮ LIỆU MẪU (FULL SEED DATA)
 
--- 5.1 Danh mục hệ nguyên tố Pokémon (Đồng bộ đầy đủ với ElementHelper)
+-- 5.1 [ĐÃ CẬP NHẬT] Danh mục hệ nguyên tố Pokémon đồng bộ 100% tiếng Việt
 SET IDENTITY_INSERT dbo.Categories ON;
 INSERT INTO dbo.Categories (Id, Name, Description) VALUES
-(1,  N'Fire',      N'Thẻ bài Pokémon hệ Lửa rực cháy'),
-(2,  N'Water',     N'Thẻ bài Pokémon hệ Nước linh hoạt'),
-(3,  N'Electric',  N'Thẻ bài Pokémon hệ Điện tốc độ cao'),
-(4,  N'Rock',      N'Thẻ bài Pokémon hệ Đá phòng thủ vững chắc'),
-(5,  N'Grass',     N'Thẻ bài Pokémon hệ Cỏ bền bỉ'),
-(6,  N'Psychic',   N'Thẻ bài Pokémon hệ Tâm Linh huyền bí'),
-(7,  N'Fighting',  N'Thẻ bài Pokémon hệ Giác Đấu cận chiến mạnh mẽ'),
-(8,  N'Colorless', N'Thẻ bài Pokémon hệ Thường đa dụng'),
-(9,  N'Darkness',  N'Thẻ bài Pokémon hệ Bóng Tối bí ẩn'),
-(10, N'Metal',     N'Thẻ bài Pokémon hệ Thép phòng ngự kiên cố'),
-(11, N'Dragon',    N'Thẻ bài Pokémon hệ Rồng uy lực tối thượng');
+(1,  N'Lửa',       N'Thẻ bài Pokémon hệ Lửa rực cháy'),
+(2,  N'Nước',      N'Thẻ bài Pokémon hệ Nước linh hoạt'),
+(3,  N'Điện',      N'Thẻ bài Pokémon hệ Điện tốc độ cao'),
+(4,  N'Đá',        N'Thẻ bài Pokémon hệ Đá phòng thủ vững chắc'),
+(5,  N'Cỏ',        N'Thẻ bài Pokémon hệ Cỏ bền bỉ'),
+(6,  N'Tâm linh',  N'Thẻ bài Pokémon hệ Tâm Linh huyền bí'),
+(7,  N'Giác đấu',  N'Thẻ bài Pokémon hệ Giác Đấu cận chiến mạnh mẽ'),
+(8,  N'Thường',    N'Thẻ bài Pokémon hệ Thường đa dụng'),
+(9,  N'Bóng tối',  N'Thẻ bài Pokémon hệ Bóng Tối bí ẩn'),
+(10, N'Thép',      N'Thẻ bài Pokémon hệ Thép phòng ngự kiên cố'),
+(11, N'Rồng',      N'Thẻ bài Pokémon hệ Rồng uy lực tối thượng');
 SET IDENTITY_INSERT dbo.Categories OFF;
 GO
 
@@ -146,21 +146,24 @@ INSERT INTO dbo.Users (Id, Username, FullName, Email, PasswordHash, Role, IsAppr
 SET IDENTITY_INSERT dbo.Users OFF;
 GO
 
--- 5.3 Danh sách 12 thẻ bài Pokémon mẫu (Đồng bộ tên phiên bản thẻ, HP và giá bán với Program.cs)
+-- 5.3 [ĐÃ CẬP NHẬT] Danh sách 15 thẻ bài Pokémon mẫu (Đồng bộ ElementType tiếng Việt & bổ sung hệ Tâm linh)
 SET IDENTITY_INSERT dbo.Products ON;
 INSERT INTO dbo.Products (Id, Name, ElementType, Power, Price, Stock, Description, ImageUrl) VALUES
-(1,  N'Charizard Holo', N'Fire',     200, 450000.00, 10, N'Thẻ bài hiếm Charizard Holo hệ lửa huyền thoại, hiệu ứng ánh kim toàn bề mặt.', N'/images/Charizard.jpeg'),
-(2,  N'Blastoise Holo', N'Water',    180, 400000.00, 8,  N'Thẻ bài hiếm Blastoise Holo sở hữu 2 khẩu đại bác thủy lực dũng mãnh.', N'/images/Blastoise.png'),
-(3,  N'Raichu Holo',    N'Electric', 150, 140000.00, 15, N'Thẻ bài Raichu Holo chớp nhoáng với chiếc đuôi tích điện công suất lớn.', N'/images/raichu.jpg'),
-(4,  N'Jolteon VMAX',   N'Electric', 260, 320000.00, 12, N'Thẻ bài siêu hiếm Jolteon VMAX 260 HP phóng ra ngàn tia sét Max Thunder Rumble.', N'/images/Jolteon.jpg'),
-(5,  N'Onix',           N'Rock',     130, 60000.00,  20, N'Rắn đá khổng lồ hệ đất đá cứng cáp, phòng thủ tuyệt hảo.', N'/images/onix.jpg'),
-(6,  N'Pikachu',        N'Electric', 110, 150000.00, 25, N'Chú chuột điện vàng đáng yêu, biểu tượng của thế giới Pokémon.', N'/images/pikachu.png'),
-(7,  N'Vulpix',         N'Fire',     90,  50000.00,  18, N'Hồ ly lửa sáu đuôi xinh xắn, kiểm soát những đốm lửa ma trơi.', N'/images/Vulpix.png'),
-(8,  N'Psyduck',        N'Water',    95,  70000.00,  14, N'Vịt khờ hệ nước, bộc phát sức mạnh tâm linh kỳ bí khi đau đầu.', N'/images/psyduck.png'),
-(9,  N'Charmander',     N'Fire',     100, 80000.00,  10, N'Khủng long lửa nhỏ với ngọn lửa luôn bùng cháy nơi chóp đuôi.', N'/images/Charmander.jpeg'),
-(10, N'Squirtle',       N'Water',    105, 85000.00,  12, N'Rùa nước tinh nghịch có mai rùa cứng cáp và khả năng bắn tia nước.', N'/images/squirtle.jpg'),
-(11, N'Diglett',        N'Rock',     80,  40000.00,  20, N'Pokémon chuột chũi di chuyển ngầm dưới lòng đất cực nhanh.', N'/images/Diglett.png'),
-(12, N'Sandshrew',      N'Rock',     85,  45000.00,  15, N'Tê tê cát hệ đất cuộn tròn mình lại để chống đỡ đòn đánh của kẻ địch.', N'/images/sandshrew.jpg');
+(1,  N'Charizard Holo', N'Lửa',      200, 450000.00, 10, N'Thẻ bài hiếm Charizard Holo hệ lửa huyền thoại, hiệu ứng ánh kim toàn bề mặt.', N'/images/Charizard.jpeg'),
+(2,  N'Blastoise Holo', N'Nước',     180, 400000.00, 8,  N'Thẻ bài hiếm Blastoise Holo sở hữu 2 khẩu đại bác thủy lực dũng mãnh.', N'/images/Blastoise.png'),
+(3,  N'Raichu Holo',    N'Điện',     150, 140000.00, 15, N'Thẻ bài Raichu Holo chớp nhoáng với chiếc đuôi tích điện công suất lớn.', N'/images/raichu.jpg'),
+(4,  N'Jolteon VMAX',   N'Điện',     260, 320000.00, 12, N'Thẻ bài siêu hiếm Jolteon VMAX 260 HP phóng ra ngàn tia sét Max Thunder Rumble.', N'/images/Jolteon.jpg'),
+(5,  N'Onix',           N'Đá',       130, 60000.00,  20, N'Rắn đá khổng lồ hệ đất đá cứng cáp, phòng thủ tuyệt hảo.', N'/images/onix.jpg'),
+(6,  N'Pikachu',        N'Điện',     110, 150000.00, 25, N'Chú chuột điện vàng đáng yêu, biểu tượng của thế giới Pokémon.', N'/images/pikachu.png'),
+(7,  N'Vulpix',         N'Lửa',      90,  50000.00,  18, N'Hồ ly lửa sáu đuôi xinh xắn, kiểm soát những đốm lửa ma trơi.', N'/images/Vulpix.png'),
+(8,  N'Psyduck',        N'Nước',     95,  70000.00,  14, N'Vịt khờ hệ nước, bộc phát sức mạnh tâm linh kỳ bí khi đau đầu.', N'/images/psyduck.png'),
+(9,  N'Charmander',     N'Lửa',      100, 80000.00,  10, N'Khủng long lửa nhỏ với ngọn lửa luôn bùng cháy nơi chóp đuôi.', N'/images/Charmander.jpeg'),
+(10, N'Squirtle',       N'Nước',     105, 85000.00,  12, N'Rùa nước tinh nghịch có mai rùa cứng cáp và khả năng bắn tia nước.', N'/images/squirtle.jpg'),
+(11, N'Diglett',        N'Đá',       80,  40000.00,  20, N'Pokémon chuột chũi di chuyển ngầm dưới lòng đất cực nhanh.', N'/images/Diglett.png'),
+(12, N'Sandshrew',      N'Đá',       85,  45000.00,  15, N'Tê tê cát hệ đất cuộn tròn mình lại để chống đỡ đòn đánh của kẻ địch.', N'/images/sandshrew.jpg'),
+(13, N'Mewtwo',         N'Tâm linh', 220, 144000.00, 5,  N'Pokémon Huyền thoại nhân tạo hệ Siêu Linh (Psychic), thuộc nhóm Pokémon Di Truyền (Genetic Pokémon).', N'/images/mewtwo.png'),
+(14, N'Mew',            N'Tâm linh', 180, 120000.00, 7,  N'Pokémon Huyền Ảo mang mã gen của mọi loài Pokémon với năng lực ngoại cảm thuần khiết.', N'/images/mew.png'),
+(15, N'Abra',           N'Tâm linh', 50,  45000.00,  16, N'Pokémon hệ Tâm linh sử dụng dịch chuyển tức thời ngay cả trong lúc đang ngủ.', N'/images/abra.png');
 SET IDENTITY_INSERT dbo.Products OFF;
 GO
 

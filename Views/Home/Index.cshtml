@@ -99,8 +99,7 @@
         </div>
     </section>
 
-    <!-- 2. THANH TRA CỨU NHANH THEO HỆ NGUYÊN TỐ
-         Thiết kế dạng thẻ lọc kỹ thuật gọn gàng, dùng chấm màu nhận diện hệ -->
+    <!-- 2. [ĐÃ FIX] THANH TRA CỨU NHANH THEO HỆ NGUYÊN TỐ (100% TIẾNG VIỆT) -->
     <section class="bg-white rounded-3 border p-3 px-4 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-sliders2 text-secondary"></i>
@@ -110,23 +109,23 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2">
-            <a asp-controller="Product" asp-action="Index" asp-route-element="Fire" class="up-element-tab">
-                <span class="up-dot dot-fire"></span> Lửa (Fire)
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Lửa" class="up-element-tab">
+                <span class="up-dot dot-fire"></span> Lửa
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-element="Electric" class="up-element-tab">
-                <span class="up-dot dot-electric"></span> Điện (Electric)
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Điện" class="up-element-tab">
+                <span class="up-dot dot-electric"></span> Điện
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-element="Water" class="up-element-tab">
-                <span class="up-dot dot-water"></span> Nước (Water)
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Nước" class="up-element-tab">
+                <span class="up-dot dot-water"></span> Nước
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-element="Grass" class="up-element-tab">
-                <span class="up-dot dot-grass"></span> Cỏ (Grass)
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Cỏ" class="up-element-tab">
+                <span class="up-dot dot-grass"></span> Cỏ
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-element="Rock" class="up-element-tab">
-                <span class="up-dot dot-rock"></span> Đá (Rock)
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Đá" class="up-element-tab">
+                <span class="up-dot dot-rock"></span> Đá
             </a>
-            <a asp-controller="Product" asp-action="Index" asp-route-element="Psychic" class="up-element-tab">
-                <span class="up-dot dot-psychic"></span> Tâm Linh (Psychic)
+            <a asp-controller="Product" asp-action="Index" asp-route-element="Tâm linh" class="up-element-tab">
+                <span class="up-dot dot-psychic"></span> Tâm linh
             </a>
             <a asp-controller="Product" asp-action="Index" class="up-element-tab up-element-all">
                 Tất cả thẻ <i class="bi bi-arrow-right-short"></i>
@@ -156,6 +155,18 @@
                     // Giữ nguyên hàm xử lý đường dẫn ảnh cục bộ và ảnh dự phòng từ ImageHelper
                     string cardImg = ImageHelper.Resolve(_env, item);
 
+                    // [ĐÃ FIX] Chuẩn hóa tên hệ hiển thị sang tiếng Việt đồng bộ
+                    string tenHeViet = (item.ElementType?.Trim().ToLowerInvariant()) switch
+                    {
+                        "fire" or "lửa" => "Lửa",
+                        "water" or "nước" => "Nước",
+                        "electric" or "điện" => "Điện",
+                        "rock" or "đá" => "Đá",
+                        "grass" or "cỏ" => "Cỏ",
+                        "psychic" or "tâm linh" => "Tâm linh",
+                        _ => string.IsNullOrWhiteSpace(item.ElementType) ? "Phổ thông" : item.ElementType
+                    };
+
                     <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                         <!-- Gắn class card-sparkle từ site.css để kích hoạt hiệu ứng quét sáng holographic -->
                         <div class="card card-sparkle h-100">
@@ -163,7 +174,7 @@
                             <!-- Thanh thông số trên cùng: Tách nhãn Hệ và Tồn kho khỏi ảnh thẻ bài -->
                             <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
                                 <span class="badge bg-light text-secondary border fw-medium rounded-1 px-2 py-1" style="font-size: 0.72rem;">
-                                    Hệ @item.ElementType
+                                    Hệ @tenHeViet
                                 </span>
                                 <span class="font-mono-stat fw-semibold @(inStock ? "text-success" : "text-danger")" style="font-size: 0.75rem;">
                                     @(inStock ? $"Còn {item.Stock}" : "Hết hàng")

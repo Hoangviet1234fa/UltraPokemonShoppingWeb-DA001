@@ -32,10 +32,11 @@ namespace UltraPokemon.Controllers
                                       || (p.Description != null && p.Description.ToLower().Contains(keyword)));
             }
 
-            // 2. Lọc theo Hệ (ElementType - truy vấn SQL)
+            // 2. [ĐÃ FIX] Lọc theo Hệ (khớp cả dữ liệu tiếng Việt lẫn tiếng Anh cũ trong DB)
             if (!string.IsNullOrWhiteSpace(element))
             {
-                query = query.Where(p => p.ElementType == element);
+                var elementVariants = GetElementVariants(element);
+                query = query.Where(p => p.ElementType != null && elementVariants.Contains(p.ElementType));
             }
 
             // Tải danh sách đã lọc từ SQLite sang bộ nhớ để xử lý decimal (lọc giá & sắp xếp) không bị lỗi NotSupportedException
@@ -75,9 +76,9 @@ namespace UltraPokemon.Controllers
                 .Take(pageSize)
                 .ToList();
 
-            // Truyền lại các tham số để giữ trạng thái trên thanh lọc & phân trang
+            // Truyền lại các tham số để giữ trạng thái trên thanh lọc & phân trang (chuẩn hóa tên hệ sang tiếng Việt)
             ViewBag.Search = search;
-            ViewBag.Element = element;
+            ViewBag.Element = string.IsNullOrWhiteSpace(element) ? string.Empty : ToVietnameseElement(element);
             ViewBag.MinPrice = minPrice;
             ViewBag.MaxPrice = maxPrice;
             ViewBag.SortOrder = sortOrder;
@@ -85,17 +86,28 @@ namespace UltraPokemon.Controllers
             ViewBag.TotalPages = totalPages;
             ViewBag.TotalItems = totalItems;
 
-            // Lấy danh sách các hệ hiện có từ bảng Categories (fallback sang Distinct từ Products nếu Categories trống)
-            var categories = await _context.Categories.Select(c => c.Name).ToListAsync();
-            if (!categories.Any())
+            // [ĐÃ FIX] Chuẩn hóa danh sách các hệ sang tiếng Việt đồng bộ & loại bỏ nút trùng (Psychic / Tâm linh)
+            var standardElements = new List<string> { "Lửa", "Nước", "Điện", "Đá", "Cỏ", "Tâm linh" };
+            var dbCategories = await _context.Categories.Select(c => c.Name).ToListAsync();
+            if (!dbCategories.Any())
             {
-                categories = await _context.Products
+                dbCategories = await _context.Products
+                    .Where(p => !string.IsNullOrEmpty(p.ElementType))
                     .Select(p => p.ElementType)
                     .Distinct()
-                    .OrderBy(e => e)
                     .ToListAsync();
             }
-            ViewBag.Elements = categories;
+
+            // Gộp các hệ chuẩn tiếng Việt với các hệ mở rộng khác (nếu Admin có tạo thêm)
+            foreach (var cat in dbCategories)
+            {
+                string vnName = ToVietnameseElement(cat);
+                if (!string.IsNullOrWhiteSpace(vnName) && !standardElements.Contains(vnName, StringComparer.OrdinalIgnoreCase))
+                {
+                    standardElements.Add(vnName);
+                }
+            }
+            ViewBag.Elements = standardElements;
 
             return View(products);
         }
@@ -112,9 +124,10 @@ namespace UltraPokemon.Controllers
 
             if (product == null) return NotFound();
 
-            // Lấy thêm tối đa 4 thẻ bài cùng hệ để gợi ý bên dưới
+            // [ĐÃ FIX] Lấy thêm tối đa 4 thẻ bài cùng hệ (hỗ trợ cả tên hệ tiếng Việt & tiếng Anh) để gợi ý bên dưới
+            var sameElementVariants = GetElementVariants(product.ElementType);
             var relatedProducts = await _context.Products
-                .Where(p => p.ElementType == product.ElementType && p.Id != product.Id)
+                .Where(p => p.ElementType != null && sameElementVariants.Contains(p.ElementType) && p.Id != product.Id)
                 .Take(4)
                 .ToListAsync();
 
@@ -141,6 +154,12 @@ namespace UltraPokemon.Controllers
         {
             ModelState.Remove("ImageUrl");
             product.ImageUrl ??= string.Empty;
+
+            // Chuẩn hóa tên hệ sang tiếng Việt khi lưu mới
+            if (!string.IsNullOrWhiteSpace(product.ElementType))
+            {
+                product.ElementType = ToVietnameseElement(product.ElementType);
+            }
 
             if (ModelState.IsValid)
             {
@@ -207,6 +226,12 @@ namespace UltraPokemon.Controllers
             // Bỏ qua validation khi ImageUrl rỗng để cho phép giữ ảnh cũ hoặc dùng ảnh mặc định theo hệ
             ModelState.Remove("ImageUrl");
             product.ImageUrl ??= string.Empty;
+
+            // Chuẩn hóa tên hệ sang tiếng Việt khi cập nhật
+            if (!string.IsNullOrWhiteSpace(product.ElementType))
+            {
+                product.ElementType = ToVietnameseElement(product.ElementType);
+            }
 
             if (ModelState.IsValid)
             {
@@ -279,6 +304,41 @@ namespace UltraPokemon.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        // HÀM HỖ TRỢ CHUẨN HÓA TÊN HỆ TIẾNG VIỆT & ÁNH XẠ SONG NGỮ TRONG SQLITE
+
+        private static string ToVietnameseElement(string? element)
+        {
+            if (string.IsNullOrWhiteSpace(element)) return string.Empty;
+
+            return element.Trim().ToLowerInvariant() switch
+            {
+                "fire" or "lửa" => "Lửa",
+                "water" or "nước" => "Nước",
+                "electric" or "điện" => "Điện",
+                "rock" or "đá" => "Đá",
+                "grass" or "cỏ" => "Cỏ",
+                "psychic" or "tâm linh" => "Tâm linh",
+                _ => element.Trim()
+            };
+        }
+
+        private static string[] GetElementVariants(string? element)
+        {
+            if (string.IsNullOrWhiteSpace(element)) return Array.Empty<string>();
+
+            string trimmed = element.Trim();
+            return trimmed.ToLowerInvariant() switch
+            {
+                "fire" or "lửa" => new[] { "Lửa", "lửa", "LỬA", "Fire", "fire", "FIRE" },
+                "water" or "nước" => new[] { "Nước", "nước", "NƯỚC", "Water", "water", "WATER" },
+                "electric" or "điện" => new[] { "Điện", "điện", "ĐIỆN", "Electric", "electric", "ELECTRIC" },
+                "rock" or "đá" => new[] { "Đá", "đá", "ĐÁ", "Rock", "rock", "ROCK" },
+                "grass" or "cỏ" => new[] { "Cỏ", "cỏ", "CỎ", "Grass", "grass", "GRASS" },
+                "psychic" or "tâm linh" => new[] { "Tâm linh", "Tâm Linh", "tâm linh", "TÂM LINH", "Psychic", "psychic", "PSYCHIC" },
+                _ => new[] { trimmed }
+            };
         }
 
         // HÀM HỖ TRỢ KIỂM TRA & LƯU FILE ẢNH VÀO WWWROOT/IMAGES/CARDS

@@ -6,11 +6,14 @@
 @{
     ViewData["Title"] = "Danh sách thẻ bài Pokémon";
 
-    //  Đọc đúng tên ViewBag do ProductController truyền sang (Search, Element, SortOrder)
+    // Đọc đúng tên ViewBag do ProductController truyền sang (Search, Element, SortOrder)
     string searchString = ViewBag.Search ?? string.Empty;
     string selectedElement = ViewBag.Element ?? string.Empty;
     string sortOrder = ViewBag.SortOrder ?? string.Empty;
-    var availableElements = ViewBag.Elements as List<string> ?? new List<string>();
+
+    // [ĐÃ FIX] Danh sách các hệ tiếng Việt đồng bộ từ Controller (fallback mặc định 6 hệ tiếng Việt)
+    var availableElements = ViewBag.Elements as List<string>
+        ?? new List<string> { "Lửa", "Nước", "Điện", "Đá", "Cỏ", "Tâm linh" };
 
     int totalItems = ViewBag.TotalItems ?? Model.Count();
     int currentPage = ViewBag.CurrentPage ?? 1;
@@ -27,7 +30,7 @@
 
 <div class="py-2">
 
-    <!--   1. KHỐI TIÊU ĐỀ, CÔNG CỤ ADMIN & BỘ LỌC TÌM KIẾM ĐA ĐIỀU KIỆN-->
+    <!-- 1. KHỐI TIÊU ĐỀ, CÔNG CỤ ADMIN & BỘ LỌC TÌM KIẾM ĐA ĐIỀU KIỆN -->
     <section class="bg-white rounded-3 border p-4 mb-4">
 
         <!-- Hàng tiêu đề & các nút thao tác nhanh (Xóa lọc / Quản trị) -->
@@ -81,7 +84,6 @@
         <form asp-controller="Product" asp-action="Index" method="get" class="row g-2 align-items-center mb-3">
             @if (!string.IsNullOrWhiteSpace(selectedElement))
             {
-                @* [ĐÃ FIX] Đổi name="elementType" thành name="element" khớp ProductController.Index *@
                 <input type="hidden" name="element" value="@selectedElement" />
             }
 
@@ -90,7 +92,6 @@
                     <span class="input-group-text bg-light border-end-0 text-secondary rounded-start-2">
                         <i class="bi bi-search"></i>
                     </span>
-                    @* Đổi name="searchString" thành name="search" khớp ProductController.Index *@
                     <input type="search"
                            name="search"
                            value="@searchString"
@@ -118,11 +119,10 @@
             </div>
         </form>
 
-        <!-- Dải thẻ lọc nhanh theo Hệ nguyên tố (giữ nguyên từ khóa tìm kiếm & kiểu sắp xếp) -->
+        <!-- [ĐÃ FIX] Dải thẻ lọc nhanh theo Hệ nguyên tố 100% tiếng Việt -->
         <div class="d-flex flex-wrap align-items-center gap-2 pt-3 border-top">
             <span class="text-secondary small fw-semibold me-1">Lọc theo Hệ:</span>
 
-            @* [ĐÃ FIX] Đổi asp-route-searchString thành asp-route-search *@
             <a asp-controller="Product" asp-action="Index"
                asp-route-search="@searchString"
                asp-route-sortOrder="@sortOrder"
@@ -133,7 +133,6 @@
             @foreach (var el in availableElements)
             {
                 bool isActive = string.Equals(selectedElement, el, StringComparison.OrdinalIgnoreCase);
-                @* [ĐÃ FIX] Đổi asp-route-elementType / asp-route-searchString thành asp-route-element / asp-route-search *@
                 <a asp-controller="Product" asp-action="Index"
                    asp-route-element="@el"
                    asp-route-search="@searchString"
@@ -145,7 +144,7 @@
         </div>
     </section>
 
-    <!--  2. LƯỚI HIỂN THỊ DANH SÁCH THẺ BÀI-->
+    <!-- 2. LƯỚI HIỂN THỊ DANH SÁCH THẺ BÀI -->
     @if (!Model.Any())
     {
         <!-- Trạng thái rỗng khi không có sản phẩm khớp bộ lọc -->
@@ -169,6 +168,18 @@
                 // Lấy đường dẫn ảnh cục bộ qua ImageHelper kèm ảnh dự phòng khi thiếu file
                 string cardImg = ImageHelper.Resolve(_env, item);
 
+                // [ĐÃ FIX] Chuyển đổi nhãn hệ sang tiếng Việt đồng bộ trên thẻ bài
+                string tenHeViet = (item.ElementType?.Trim().ToLowerInvariant()) switch
+                {
+                    "fire" or "lửa" => "Lửa",
+                    "water" or "nước" => "Nước",
+                    "electric" or "điện" => "Điện",
+                    "rock" or "đá" => "Đá",
+                    "grass" or "cỏ" => "Cỏ",
+                    "psychic" or "tâm linh" => "Tâm linh",
+                    _ => string.IsNullOrWhiteSpace(item.ElementType) ? "Phổ thông" : item.ElementType
+                };
+
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <!-- Gắn class card-sparkle từ site.css để kích hoạt hiệu ứng quét sáng holographic -->
                     <div class="card card-sparkle h-100">
@@ -176,7 +187,7 @@
                         <!-- Thanh thông số trên cùng: Tách nhãn Hệ, HP và Tồn kho khỏi ảnh lá bài -->
                         <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
                             <span class="badge bg-light text-secondary border fw-medium rounded-1 px-2 py-1" style="font-size: 0.72rem;">
-                                Hệ @(string.IsNullOrWhiteSpace(item.ElementType) ? "Phổ thông" : item.ElementType)
+                                Hệ @tenHeViet
                             </span>
 
                             <div class="d-flex align-items-center gap-2 font-mono-stat" style="font-size: 0.74rem;">
@@ -274,7 +285,6 @@
             <nav aria-label="Phân trang thẻ bài" class="mt-4">
                 <ul class="pagination justify-content-center gap-1 tcg-pagination">
                     <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
-                        @* [ĐÃ FIX] Truyền đúng tham số search và element khi chuyển trang *@
                         <a class="page-link rounded-2" asp-action="Index"
                            asp-route-page="@(currentPage - 1)"
                            asp-route-search="@searchString"
@@ -312,7 +322,7 @@
     }
 </div>
 
-<!--   CSS RIÊNG CHO TRANG DANH SÁCH THẺ BÀI-->
+<!-- CSS RIÊNG CHO TRANG DANH SÁCH THẺ BÀI -->
 <style>
     /* Thẻ lọc theo hệ nguyên tố dáng vuông vức gọn gàng */
     .tcg-filter-tab {

@@ -1,10 +1,24 @@
 @model UltraPokemon.Models.Product
 
+@{
+    // [ĐÃ FIX] Chuẩn hóa tên hệ nguyên tố sang tiếng Việt đồng bộ trên toàn bộ thẻ bài
+    string tenHeViet = (Model.ElementType?.Trim().ToLowerInvariant()) switch
+    {
+        "fire" or "lửa" => "Lửa",
+        "water" or "nước" => "Nước",
+        "electric" or "điện" => "Điện",
+        "rock" or "đá" => "Đá",
+        "grass" or "cỏ" => "Cỏ",
+        "psychic" or "tâm linh" => "Tâm linh",
+        _ => string.IsNullOrWhiteSpace(Model.ElementType) ? "Phổ thông" : Model.ElementType
+    };
+}
+
 <div class="card card-sparkle h-100">
     <!-- Thanh thông số phía trên: Hệ nguyên tố & Chỉ số HP -->
     <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
         <span class="badge bg-light text-secondary border fw-medium rounded-1 px-2 py-1">
-            @Model.ElementType
+            Hệ @tenHeViet
         </span>
         <span class="font-mono-stat text-muted small fw-bold">
             HP @Model.Power
@@ -14,7 +28,7 @@
     <!-- Khung hiển thị hình ảnh thẻ bài (sạch, không bị sticker che góc) -->
     <div class="px-3 py-2 text-center">
         <a asp-controller="Product" asp-action="Details" asp-route-id="@Model.Id" class="d-block bg-light rounded-2 p-3">
-            @* [ĐÃ FIX] Sử dụng ImageHelper.Resolve kèm fallback SVG mặc định *@
+            @* Sử dụng ImageHelper.Resolve kèm fallback SVG mặc định *@
             <img src="@ImageHelper.Resolve(Env, Model)"
                  onerror="this.onerror=null;this.src=this.dataset.fallback;"
                  data-fallback="@ImageHelper.Placeholder(Model)"
