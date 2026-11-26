@@ -1,5 +1,4 @@
--- HỆ THỐNG CƠ SỞ DỮ LIỆU: ULTRAPOKÉMON CARD STORE (ASP.NET CORE MVC)
-
+-- HỆ THỐNG CƠ SỞ DỮ LIỆU: ULTRAPOKÉMON CARD STORE 
 
 -- 1. TẠO CƠ SỞ DỮ LIỆU
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = N'UltraPokemonDB')
@@ -12,6 +11,7 @@ USE UltraPokemonDB;
 GO
 
 -- 2. DỌN DẸP BẢNG CŨ (XÓA BẢNG CON TRƯỚC, BẢNG CHA SAU ĐỂ TRÁNH LỖI KHÓA NGOẠI)
+IF OBJECT_ID(N'dbo.Reviews', N'U') IS NOT NULL DROP TABLE dbo.Reviews;
 IF OBJECT_ID(N'dbo.OrderDetails', N'U') IS NOT NULL DROP TABLE dbo.OrderDetails;
 IF OBJECT_ID(N'dbo.Orders', N'U') IS NOT NULL DROP TABLE dbo.Orders;
 IF OBJECT_ID(N'dbo.Products', N'U') IS NOT NULL DROP TABLE dbo.Products;
@@ -107,6 +107,24 @@ CREATE TABLE dbo.OrderDetails (
 );
 GO
 
+-- BẢNG 6: REVIEWS (ĐÁNH GIÁ SẢN PHẨM CỦA KHÁCH SAU KHI ĐƠN HÀNG HOÀN TẤT)
+CREATE TABLE dbo.Reviews (
+    Id INT IDENTITY(1,1) NOT NULL,
+    ProductId INT NOT NULL,
+    OrderId INT NOT NULL,
+    ReviewerName NVARCHAR(100) NOT NULL,
+    ReviewerEmail NVARCHAR(150) NOT NULL,
+    Rating INT NOT NULL,
+    Comment NVARCHAR(500) NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_Reviews PRIMARY KEY CLUSTERED (Id ASC),
+    CONSTRAINT UQ_Reviews_OrderId_ProductId UNIQUE (OrderId, ProductId), -- Chặn đánh giá trùng 1 sản phẩm trong cùng 1 đơn
+    CONSTRAINT FK_Reviews_Products FOREIGN KEY (ProductId) REFERENCES dbo.Products(Id) ON DELETE CASCADE,
+    CONSTRAINT FK_Reviews_Orders FOREIGN KEY (OrderId) REFERENCES dbo.Orders(Id) ON DELETE NO ACTION,
+    CONSTRAINT CK_Reviews_Rating CHECK (Rating >= 1 AND Rating <= 5)
+);
+GO
+
 -- 4. TẠO CÁC CHỈ MỤC (INDEXES) TỐI ƯU TỐC ĐỘ TÌM KIẾM & JOIN
 CREATE NONCLUSTERED INDEX IX_Products_ElementType ON dbo.Products(ElementType);
 CREATE NONCLUSTERED INDEX IX_Orders_UserId ON dbo.Orders(UserId);
@@ -114,6 +132,8 @@ CREATE NONCLUSTERED INDEX IX_Orders_UserEmail ON dbo.Orders(UserEmail);
 CREATE NONCLUSTERED INDEX IX_Orders_OrderDate ON dbo.Orders(OrderDate DESC);
 CREATE NONCLUSTERED INDEX IX_OrderDetails_OrderId ON dbo.OrderDetails(OrderId);
 CREATE NONCLUSTERED INDEX IX_OrderDetails_ProductId ON dbo.OrderDetails(ProductId);
+CREATE NONCLUSTERED INDEX IX_Reviews_ProductId ON dbo.Reviews(ProductId);
+CREATE NONCLUSTERED INDEX IX_Reviews_CreatedAt ON dbo.Reviews(CreatedAt DESC);
 GO
 
 -- 5. NẠP TOÀN BỘ DỮ LIỆU MẪU (FULL SEED DATA)
@@ -191,6 +211,14 @@ INSERT INTO dbo.OrderDetails (Id, OrderId, ProductId, Quantity, UnitPrice) VALUE
 SET IDENTITY_INSERT dbo.OrderDetails OFF;
 GO
 
+-- 5.6 Đánh giá sản phẩm mẫu 
+SET IDENTITY_INSERT dbo.Reviews ON;
+INSERT INTO dbo.Reviews (Id, ProductId, OrderId, ReviewerName, ReviewerEmail, Rating, Comment, CreatedAt) VALUES
+(1, 4, 1003, N'Satoshi Ketchum', N'customer@ultrapokemon.vn', 5, N'Thẻ chính hãng, in sắc nét. Shop lồng sleeve và kẹp khung cứng chống gập rất cẩn thận.', '2026-11-06 15:20:00'),
+(2, 7, 1003, N'Satoshi Ketchum', N'customer@ultrapokemon.vn', 5, N'Thẻ mới đẹp, không trầy xước. Giao hàng nhanh đúng hẹn.', '2026-11-06 15:25:00');
+SET IDENTITY_INSERT dbo.Reviews OFF;
+GO
+
 -- 6. TRUY VẤN KIỂM TRA NHANH KẾT QUẢ TẠO DỮ LIỆU
 SELECT 'Categories'   AS [TableName], COUNT(*) AS [TotalRows] FROM dbo.Categories
 UNION ALL
@@ -200,5 +228,7 @@ SELECT 'Products'     AS [TableName], COUNT(*) AS [TotalRows] FROM dbo.Products
 UNION ALL
 SELECT 'Orders'       AS [TableName], COUNT(*) AS [TotalRows] FROM dbo.Orders
 UNION ALL
-SELECT 'OrderDetails' AS [TableName], COUNT(*) AS [TotalRows] FROM dbo.OrderDetails;
+SELECT 'OrderDetails' AS [TableName], COUNT(*) AS [TotalRows] FROM dbo.OrderDetails
+UNION ALL
+SELECT 'Reviews'      AS [TableName], COUNT(*) AS [TotalRows] FROM dbo.Reviews;
 GO
