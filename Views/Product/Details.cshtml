@@ -11,6 +11,11 @@
     // Đọc đúng tên ViewBag.RelatedProducts do ProductController.Details truyền sang
     var related = ViewBag.RelatedProducts as List<Product> ?? new List<Product>();
 
+    // Đọc danh sách đánh giá và điểm sao trung bình từ ProductController.Details
+    var reviews = ViewBag.Reviews as List<Review> ?? new List<Review>();
+    double avgRating = ViewBag.AverageRating != null ? Convert.ToDouble(ViewBag.AverageRating) : 0.0;
+    int totalReviews = reviews.Count;
+
     // Gọi Helper để lấy màu sắc Bootstrap tương ứng với Hệ (Ví dụ: Fire -> danger (đỏ), Water -> primary (xanh dương))
     var color = ElementHelper.Color(Model.ElementType);
 
@@ -19,18 +24,65 @@
     var powerPct = Math.Clamp((int)Math.Round(Model.Power / maxPower * 100), 0, 100);
 }
 
+<style>
+    .review-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #495057;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        text-transform: uppercase;
+    }
+
+    .review-filter-btn {
+        border: 1px solid #dee2e6;
+        background-color: #fff;
+        color: #495057;
+        font-size: 0.875rem;
+        padding: 6px 14px;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+    }
+
+        .review-filter-btn:hover {
+            border-color: #f59e0b;
+            color: #b45309;
+        }
+
+        .review-filter-btn.active {
+            border-color: #f59e0b;
+            background-color: #fffbeb;
+            color: #b45309;
+            font-weight: 600;
+        }
+</style>
+
 <div class="container mt-4">
     <!-- Nút quay lại trang danh sách sản phẩm -->
     <a asp-action="Index" class="btn btn-secondary mb-3">&larr; Quay lại danh sách</a>
+
+    @* Hiển thị thông báo khi khách hàng gửi đánh giá thành công *@
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
     <div class="row bg-white rounded-4 shadow-sm p-4">
 
         <!-- CỘT TRÁI: HIỂN THỊ HÌNH ẢNH SẢN PHẨM -->
         <div class="col-md-5 text-center">
             <div class="detail-card-wrap card-sparkle d-inline-block rounded">
-                <!-- Xử lý ảnh: ImageHelper tạo đường dẫn chuẩn. Sự kiện onerror giúp tự động tải ảnh mặc định (fallback) nếu file ảnh bị lỗi hoặc mất -->
-                <img src="@ImageHelper.Resolve(Env, Model)"
-                     onerror="this.onerror=null;this.src=this.dataset.fallback;"
+                <img id="productDetailImg"
+                     src="@ImageHelper.Resolve(Env, Model)"
                      data-fallback="@ImageHelper.Placeholder(Model)"
                      alt="@Model.Name"
                      class="img-fluid rounded shadow"
@@ -40,7 +92,33 @@
 
         <!-- CỘT PHẢI: HIỂN THỊ THÔNG TIN & CHỨC NĂNG -->
         <div class="col-md-7">
-            <h2 class="fw-bold">@Model.Name</h2>
+            <h2 class="fw-bold mb-1">@Model.Name</h2>
+
+            @* Thanh tóm tắt điểm sao ngay dưới tên sản phẩm *@
+            <div class="d-flex align-items-center gap-2 mb-2">
+                @if (totalReviews > 0)
+                {
+                    <div class="d-inline-flex align-items-center text-warning">
+                        @for (int s = 1; s <= 5; s++)
+                        {
+                            var filled = s <= Math.Round(avgRating);
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="@(filled ? "currentColor" : "#dee2e6")">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                        }
+                    </div>
+                    <span class="fw-bold text-dark small">@avgRating.ToString("0.0")</span>
+                    <span class="text-muted small">|</span>
+                    <a href="#customer-reviews-section" class="text-muted small text-decoration-none">
+                        @totalReviews đánh giá
+                    </a>
+                }
+                else
+                {
+                    <span class="text-muted small">Chưa có đánh giá</span>
+                }
+            </div>
+
             <hr />
             <!-- Hiển thị giá tiền định dạng có dấu phẩy phân cách hàng nghìn (N0) -->
             <h3 class="text-danger fw-bold mb-3">Giá: @Model.Price.ToString("N0") VNĐ</h3>
@@ -48,13 +126,11 @@
             <ul class="list-group list-group-flush mb-4">
                 <li class="list-group-item">
                     <strong>Hệ:</strong>
-                    <!-- Màu nền badge thay đổi linh hoạt theo biến 'color' đã tính ở trên (nếu nền vàng warning thì đổi chữ sang màu tối text-dark cho dễ đọc) -->
                     <span class="badge bg-@color @(color == "warning" ? "text-dark" : "")">@Model.ElementType</span>
                 </li>
 
                 <li class="list-group-item">
                     <strong>Tồn kho:</strong>
-                    <!-- Kiểm tra số lượng tồn kho (Stock): nếu > 0 thì báo số lượng còn lại, ngược lại báo Hết hàng -->
                     @if (Model.Stock > 0)
                     {
                         <span class="badge bg-success">Còn @Model.Stock lá</span>
@@ -68,7 +144,6 @@
                 <li class="list-group-item">
                     <strong>Chỉ số sức mạnh (Power):</strong> <span class="badge bg-danger">⚡ @Model.Power HP / ATK</span>
                     <div class="progress mt-2" style="height: 10px;">
-                        <!-- Độ dài của thanh progress-bar được điều chỉnh tự động bằng biến powerPct -->
                         <div class="progress-bar bg-@color" role="progressbar" style="width: @(powerPct)%"></div>
                     </div>
                 </li>
@@ -86,9 +161,7 @@
                 @if (Model.Stock > 0)
                 {
                     <form asp-controller="Cart" asp-action="Add" method="post" class="d-inline">
-                        <!-- Tạo mã Token chống tấn công giả mạo yêu cầu (CSRF) khớp với [ValidateAntiForgeryToken] ở CartController -->
                         @Html.AntiForgeryToken()
-                        <!-- Các input type="hidden" dùng để truyền ngầm ID sản phẩm và đường dẫn trang hiện tại lên server -->
                         <input type="hidden" name="id" value="@Model.Id" />
                         <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
                         <button type="submit" class="btn btn-success btn-lg">Thêm vào giỏ hàng</button>
@@ -96,7 +169,6 @@
                 }
                 else
                 {
-                    <!-- Nếu hết hàng (Stock <= 0) thì vô hiệu hóa nút bấm để ngăn khách đặt vượt tồn kho -->
                     <button type="button" class="btn btn-secondary btn-lg" disabled>Hết hàng</button>
                 }
 
@@ -109,20 +181,178 @@
         </div>
     </div>
 
+    <!-- KHU VỰC ĐÁNH GIÁ SẢN PHẨM TỪ NGƯỜI MUA -->
+    <div id="customer-reviews-section" class="bg-white rounded-4 shadow-sm p-4 mt-4">
+        <h4 class="fw-bold mb-4">Đánh giá sản phẩm</h4>
+
+        @if (totalReviews == 0)
+        {
+            <div class="text-center py-4 bg-light rounded-3 border">
+                <p class="fw-semibold text-dark mb-1">Chưa có đánh giá nào cho lá bài này</p>
+                <p class="text-muted small mb-0">
+                    Sau khi đặt mua và nhận hàng thành công, bạn có thể gửi đánh giá tại mục
+                    <a asp-controller="Cart" asp-action="MyOrders" class="text-decoration-none fw-semibold">Đơn hàng của tôi</a>.
+                </p>
+            </div>
+        }
+        else
+        {
+            <!-- Khung tổng quan điểm số + biểu đồ phân bổ 5 sao -> 1 sao -->
+            <div class="row align-items-center bg-light rounded-3 border p-3 p-md-4 mb-4 g-3">
+                <div class="col-md-4 text-center border-end-md">
+                    <div class="display-5 fw-bold text-dark lh-1 mb-1">
+                        @avgRating.ToString("0.0")<span class="fs-5 text-muted fw-normal"> / 5</span>
+                    </div>
+                    <div class="d-inline-flex align-items-center text-warning my-2">
+                        @for (int s = 1; s <= 5; s++)
+                        {
+                            var filled = s <= Math.Round(avgRating);
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="@(filled ? "currentColor" : "#dee2e6")">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                        }
+                    </div>
+                    <div class="text-muted small">Dựa trên @totalReviews lượt đánh giá</div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="vstack gap-2 px-md-3">
+                        @for (int star = 5; star >= 1; star--)
+                        {
+                            var starCount = reviews.Count(r => r.Rating == star);
+                            var pct = totalReviews > 0 ? (int)Math.Round(starCount * 100.0 / totalReviews) : 0;
+                            <div class="d-flex align-items-center gap-2 small">
+                                <span class="text-nowrap fw-semibold" style="width: 46px;">@star sao</span>
+                                <div class="progress flex-grow-1" style="height: 8px; background-color: #e9ecef;">
+                                    <div class="progress-bar bg-warning" role="progressbar" style="width: @(pct)%"></div>
+                                </div>
+                                <span class="text-muted text-end" style="width: 38px;">@starCount</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thanh lọc nhanh theo số sao -->
+            <div class="d-flex flex-wrap gap-2 mb-4" id="reviewFilterBar">
+                <button type="button" class="review-filter-btn active" data-filter-star="all">
+                    Tất cả (@totalReviews)
+                </button>
+                @for (int star = 5; star >= 1; star--)
+                {
+                    var starCount = reviews.Count(r => r.Rating == star);
+                    <button type="button" class="review-filter-btn" data-filter-star="@star">
+                        @star Sao (@starCount)
+                    </button>
+                }
+            </div>
+
+            <!-- Danh sách từng bình luận -->
+            <div class="divide-y" id="reviewListContainer">
+                @foreach (var review in reviews)
+                {
+                    // Tạo 2 chữ cái đầu từ tên khách hàng làm Avatar
+                    var parts = (review.ReviewerName ?? "KH").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var initials = parts.Length >= 2
+                        ? $"{parts[0][0]}{parts[^1][0]}"
+                        : (parts.Length == 1 && parts[0].Length >= 2 ? parts[0].Substring(0, 2) : "KH");
+
+                    <div class="review-item border-bottom py-3" data-rating="@review.Rating">
+                        <div class="d-flex gap-3">
+                            <div class="review-avatar">@initials</div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-1">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-semibold text-dark">@review.ReviewerName</span>
+                                        <span class="d-inline-flex align-items-center gap-1 text-success small">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                <path d="M20 6L9 17l-5-5" />
+                                            </svg>
+                                            Đã mua hàng
+                                        </span>
+                                    </div>
+                                    <span class="text-muted small">@review.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+
+                                <!-- Hiển thị sao của từng người đánh giá -->
+                                <div class="d-inline-flex align-items-center text-warning my-1">
+                                    @for (int s = 1; s <= 5; s++)
+                                    {
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="@(s <= review.Rating ? "currentColor" : "#dee2e6")">
+                                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                        </svg>
+                                    }
+                                </div>
+
+                                <p class="mb-0 text-dark" style="line-height: 1.55;">@review.Comment</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div id="emptyFilterNotice" class="text-center text-muted py-4 d-none">
+                Không có đánh giá nào ở mức sao này.
+            </div>
+        }
+    </div>
+
     <!-- PHẦN DƯỚI: SẢN PHẨM LIÊN QUAN (CÙNG HỆ) -->
-    <!-- Dùng lệnh Any() để kiểm tra nếu danh sách có ít nhất 1 sản phẩm thì mới hiển thị khu vực này -->
     @if (related.Any())
     {
         <h4 class="mt-5 fw-bold">Thẻ cùng hệ @Model.ElementType</h4>
         <div class="row mt-3">
-            <!-- Vòng lặp foreach duyệt qua từng sản phẩm liên quan -->
             @foreach (var r in related)
             {
                 <div class="col-6 col-md-3 mb-4">
-                    <!-- Gọi Partial View (View thành phần) '_ProductCard' để tái sử dụng giao diện 1 thẻ bài, truyền model 'r' vào -->
                     <partial name="_ProductCard" model="r" />
                 </div>
             }
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            // 1. Tự động tải ảnh mặc định (fallback) nếu file ảnh bị lỗi hoặc mất
+            const detailImg = document.getElementById('productDetailImg');
+            if (detailImg) {
+                detailImg.addEventListener('error', function () {
+                    const fallback = detailImg.getAttribute('data-fallback');
+                    if (fallback && detailImg.getAttribute('src') !== fallback) {
+                        detailImg.setAttribute('src', fallback);
+                    }
+                }, { once: true });
+            }
+
+            // 2. Bộ lọc danh sách đánh giá theo số sao trên trang chi tiết sản phẩm
+            const filterButtons = document.querySelectorAll('.review-filter-btn');
+            const reviewItems = document.querySelectorAll('.review-item');
+            const emptyNotice = document.getElementById('emptyFilterNotice');
+
+            filterButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const selectedStar = btn.getAttribute('data-filter-star');
+
+                    filterButtons.forEach(function (b) {
+                        b.classList.remove('active');
+                    });
+                    btn.classList.add('active');
+
+                    let visibleCount = 0;
+                    reviewItems.forEach(function (item) {
+                        const itemStar = item.getAttribute('data-rating');
+                        const isMatch = (selectedStar === 'all' || itemStar === selectedStar);
+                        item.classList.toggle('d-none', !isMatch);
+                        if (isMatch) visibleCount++;
+                    });
+
+                    if (emptyNotice) {
+                        emptyNotice.classList.toggle('d-none', visibleCount > 0);
+                    }
+                });
+            });
+        })();
+    </script>
+}

@@ -1,13 +1,63 @@
 ﻿@model IEnumerable<UltraPokemon.Models.Order>
+@using Microsoft.AspNetCore.Hosting
 @using UltraPokemon.Models
+@using UltraPokemon.Helpers
+@inject IWebHostEnvironment Env
 @{
     ViewData["Title"] = "Đơn hàng của tôi";
+    // Nhận danh sách "OrderId_ProductId" đã đánh giá từ CartController
+    var reviewedKeys = ViewBag.ReviewedKeys as HashSet<string> ?? new HashSet<string>();
 }
+
+<style>
+    /* CSS tùy chỉnh cho bộ chọn sao và thẻ gợi ý nhận xét nhanh */
+    .star-rating-btn {
+        background: none;
+        border: none;
+        padding: 0 4px;
+        cursor: pointer;
+        color: #dee2e6;
+        transition: transform 0.12s ease, color 0.12s ease;
+        line-height: 1;
+    }
+
+        .star-rating-btn:hover {
+            transform: scale(1.12);
+        }
+
+        .star-rating-btn.active,
+        .star-rating-btn.hover {
+            color: #f59e0b;
+        }
+
+    .quick-tag-btn {
+        font-size: 0.8rem;
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        color: #495057;
+        border-radius: 999px;
+        padding: 4px 12px;
+        transition: all 0.15s ease;
+    }
+
+        .quick-tag-btn:hover {
+            border-color: #0d6efd;
+            color: #0d6efd;
+            background-color: #f0f6ff;
+        }
+
+        .quick-tag-btn.selected {
+            border-color: #0d6efd;
+            background-color: #e7f1ff;
+            color: #0a58ca;
+            font-weight: 500;
+        }
+</style>
 
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold mb-1">🛍️ Lịch sử đơn hàng của tôi</h2>
+            <h2 class="fw-bold mb-1"> Lịch sử đơn hàng của tôi</h2>
             <p class="text-muted small mb-0">Theo dõi trạng thái vận chuyển và chi tiết các bộ bài Pokémon bạn đã đặt</p>
         </div>
         <a asp-controller="Product" asp-action="Index" class="btn btn-primary fw-semibold">
@@ -81,16 +131,55 @@
                                     <th class="text-center">Số lượng</th>
                                     <th class="text-end">Đơn giá</th>
                                     <th class="text-end">Thành tiền</th>
+                                    @if (order.Status == OrderStatus.Completed)
+                                    {
+                                        <th class="text-end">Đánh giá</th>
+                                    }
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var detail in order.OrderDetails)
                                 {
+                                    var productName = detail.Product?.Name ?? $"Lá bài #{detail.ProductId}";
+                                    var productElement = detail.Product?.ElementType ?? "Thẻ bài TCG";
+                                    var productImg = detail.Product != null ? ImageHelper.Resolve(Env, detail.Product) : "";
+                                    var productFallback = detail.Product != null ? ImageHelper.Placeholder(detail.Product) : "";
+
                                     <tr>
-                                        <td class="fw-semibold">@(detail.Product?.Name ?? $"Lá bài #{detail.ProductId}")</td>
+                                        <td class="fw-semibold">@productName</td>
                                         <td class="text-center">x@(detail.Quantity)</td>
                                         <td class="text-end">@detail.UnitPrice.ToString("N0")đ</td>
                                         <td class="text-end fw-semibold">@((detail.UnitPrice * detail.Quantity).ToString("N0"))đ</td>
+
+                                        @if (order.Status == OrderStatus.Completed)
+                                        {
+                                            var reviewKey = $"{order.Id}_{detail.ProductId}";
+                                            <td class="text-end">
+                                                @if (reviewedKeys.Contains(reviewKey))
+                                                {
+                                                    <a asp-controller="Product" asp-action="Details" asp-route-id="@detail.ProductId"
+                                                       class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none px-2 py-1">
+                                                        Đã đánh giá
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-warning text-dark fw-semibold px-3"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#reviewModal"
+                                                            data-order-id="@order.Id"
+                                                            data-order-code="@order.OrderCode"
+                                                            data-product-id="@detail.ProductId"
+                                                            data-product-name="@productName"
+                                                            data-product-element="@productElement"
+                                                            data-product-img="@productImg"
+                                                            data-product-fallback="@productFallback">
+                                                        Viết đánh giá
+                                                    </button>
+                                                }
+                                            </td>
+                                        }
                                     </tr>
                                 }
                             </tbody>
@@ -126,3 +215,214 @@
         }
     }
 </div>
+
+<!-- Hộp thoại (Modal) đánh giá sản phẩm thực tế -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form asp-controller="Product" asp-action="AddReview" method="post" class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            @Html.AntiForgeryToken()
+
+            <div class="modal-header border-bottom bg-white py-3">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="reviewModalLabel">Đánh giá sản phẩm</h5>
+                    <small class="text-muted" id="modalOrderCode"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <input type="hidden" name="orderId" id="modalOrderId" />
+                <input type="hidden" name="productId" id="modalProductId" />
+                <input type="hidden" name="rating" id="modalRatingInput" value="5" />
+
+                <!-- Thẻ thông tin sản phẩm đã mua -->
+                <div class="d-flex align-items-center gap-3 p-2.5 bg-light rounded-3 border mb-4 p-2">
+                    <img id="modalProductImg" src="" alt="" class="rounded border bg-white"
+                         style="width: 52px; height: 72px; object-fit: cover;" />
+                    <div>
+                        <div class="fw-bold text-dark" id="modalProductName"></div>
+                        <span class="badge bg-secondary-subtle text-secondary border mt-1" id="modalProductElement"></span>
+                    </div>
+                </div>
+
+                <!-- Khu vực chọn 5 sao tương tác -->
+                <div class="text-center mb-4">
+                    <div class="small text-muted mb-2">Chất lượng sản phẩm &amp; dịch vụ</div>
+                    <div class="d-inline-flex align-items-center justify-content-center" id="starRatingGroup" role="radiogroup" aria-label="Chọn số sao">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <button type="button" class="star-rating-btn active" data-value="@i" aria-label="@i sao">
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                </svg>
+                            </button>
+                        }
+                    </div>
+                    <div class="fw-semibold text-warning mt-1" id="ratingTextLabel" style="font-size: 0.9rem;">Tuyệt vời</div>
+                </div>
+
+                <!-- Gợi ý nhận xét nhanh đặc thù thẻ bài TCG -->
+                <div class="mb-3">
+                    <label class="form-label small text-muted mb-2">Gợi ý nhận xét nhanh:</label>
+                    <div class="d-flex flex-wrap gap-2" id="quickTagsContainer">
+                        <button type="button" class="quick-tag-btn">Thẻ chính hãng, in sắc nét</button>
+                        <button type="button" class="quick-tag-btn">Đóng gói chống gập kỹ</button>
+                        <button type="button" class="quick-tag-btn">Thẻ mới đẹp, không trầy xước</button>
+                        <button type="button" class="quick-tag-btn">Giao hàng nhanh đúng hẹn</button>
+                    </div>
+                </div>
+
+                <!-- Ô nhập nhận xét chi tiết + đếm ký tự -->
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label for="modalComment" class="form-label fw-semibold small mb-0">Chi tiết đánh giá</label>
+                        <span class="text-muted small" id="commentCharCount">0/500</span>
+                    </div>
+                    <textarea name="comment" id="modalComment" class="form-control" rows="3" maxlength="500"
+                              placeholder="Hãy chia sẻ tình trạng góc cạnh thẻ, bọc bảo vệ (sleeve/toploader) và trải nghiệm nhận hàng của bạn..." required></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top bg-light px-4 py-3">
+                <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Trở lại</button>
+                <button type="submit" class="btn btn-primary fw-semibold px-4">Hoàn thành</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const reviewModal = document.getElementById('reviewModal');
+            if (!reviewModal) return;
+
+            // Đưa Modal ra trực tiếp thẻ body để không bị kẹt dưới lớp nền mờ
+            document.body.appendChild(reviewModal);
+
+            const ratingLabels = ['', 'Rất tệ', 'Không hài lòng', 'Bình thường', 'Hài lòng', 'Tuyệt vời'];
+
+            const starButtons = reviewModal.querySelectorAll('.star-rating-btn');
+            const ratingInput = document.getElementById('modalRatingInput');
+            const ratingLabel = document.getElementById('ratingTextLabel');
+            const commentBox = document.getElementById('modalComment');
+            const charCount = document.getElementById('commentCharCount');
+            const quickTags = reviewModal.querySelectorAll('.quick-tag-btn');
+            const modalImg = document.getElementById('modalProductImg');
+
+            function getFieldValue(el = document.getElementById('')) {
+                return el ? String(Reflect.get(el, 'value') || '') : '';
+            }
+
+            function setFieldValue(el = document.getElementById(''), val = '') {
+                if (el) {
+                    Object.assign(el, { value: val });
+                }
+            }
+
+            function renderStars(selectedValue = 5, hoverValue = 0) {
+                const target = Number(hoverValue || selectedValue);
+                starButtons.forEach(function (btn) {
+                    const val = parseInt(btn.getAttribute('data-value') || '0', 10);
+                    btn.classList.toggle('active', val <= selectedValue);
+                    btn.classList.toggle('hover', hoverValue > 0 && val <= hoverValue);
+                });
+                if (ratingLabel) {
+                    ratingLabel.textContent = ratingLabels[target] || 'Tuyệt vời';
+                }
+            }
+
+            starButtons.forEach(function (btn) {
+                const val = parseInt(btn.getAttribute('data-value') || '5', 10);
+
+                btn.addEventListener('mouseenter', function () {
+                    const current = parseInt(getFieldValue(ratingInput) || '5', 10);
+                    renderStars(current, val);
+                });
+
+                btn.addEventListener('mouseleave', function () {
+                    const current = parseInt(getFieldValue(ratingInput) || '5', 10);
+                    renderStars(current, 0);
+                });
+
+                btn.addEventListener('click', function () {
+                    setFieldValue(ratingInput, String(val));
+                    renderStars(val, 0);
+                });
+            });
+
+            // Xử lý bấm chọn tag gợi ý nhanh
+            quickTags.forEach(function (tagBtn) {
+                tagBtn.addEventListener('click', function () {
+                    if (!commentBox) return;
+                    const phrase = tagBtn.textContent ? tagBtn.textContent.trim() : '';
+                    if (!phrase) return;
+
+                    const currentText = getFieldValue(commentBox).trim();
+                    if (currentText.includes(phrase)) return;
+
+                    const nextText = currentText ? (currentText + '. ' + phrase) : phrase;
+                    if (nextText.length <= 500) {
+                        setFieldValue(commentBox, nextText);
+                        tagBtn.classList.add('selected');
+                        updateCharCounter();
+                    }
+                });
+            });
+
+            function updateCharCounter() {
+                if (commentBox && charCount) {
+                    charCount.textContent = getFieldValue(commentBox).length + '/500';
+                }
+            }
+
+            if (commentBox) {
+                commentBox.addEventListener('input', updateCharCounter);
+            }
+
+            if (modalImg) {
+                modalImg.addEventListener('error', function () {
+                    const fb = modalImg.getAttribute('data-fallback');
+                    if (fb && modalImg.getAttribute('src') !== fb) {
+                        modalImg.setAttribute('src', fb);
+                    }
+                });
+            }
+
+            // Nạp dữ liệu khi mở Modal
+            reviewModal.addEventListener('show.bs.modal', function (event) {
+                const button = Reflect.get(event, 'relatedTarget');
+                if (!button) return;
+
+                const orderIdInput = document.getElementById('modalOrderId');
+                const productIdInput = document.getElementById('modalProductId');
+                const orderCodeEl = document.getElementById('modalOrderCode');
+                const productNameEl = document.getElementById('modalProductName');
+                const productElementEl = document.getElementById('modalProductElement');
+
+                setFieldValue(orderIdInput, button.getAttribute('data-order-id') || '');
+                setFieldValue(productIdInput, button.getAttribute('data-product-id') || '');
+                if (orderCodeEl) orderCodeEl.textContent = 'Đơn hàng ' + (button.getAttribute('data-order-code') || '');
+                if (productNameEl) productNameEl.textContent = button.getAttribute('data-product-name') || '';
+                if (productElementEl) productElementEl.textContent = 'Hệ: ' + (button.getAttribute('data-product-element') || '');
+
+                if (modalImg) {
+                    const imgSrc = button.getAttribute('data-product-img') || '';
+                    const fallbackSrc = button.getAttribute('data-product-fallback') || '';
+                    modalImg.setAttribute('data-fallback', fallbackSrc);
+                    modalImg.setAttribute('src', imgSrc || fallbackSrc);
+                }
+
+                setFieldValue(ratingInput, '5');
+                renderStars(5, 0);
+
+                setFieldValue(commentBox, '');
+                updateCharCounter();
+
+                quickTags.forEach(function (t) {
+                    t.classList.remove('selected');
+                });
+            });
+        })();
+    </script>
+}

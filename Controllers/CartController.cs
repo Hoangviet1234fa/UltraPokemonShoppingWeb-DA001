@@ -341,6 +341,17 @@ public class CartController : Controller
             .OrderByDescending(o => o.OrderDate)
             .ToListAsync();
 
+        //  Lấy danh sách khóa "OrderId_ProductId" đã được khách hàng đánh giá
+        // để hiển thị trạng thái "Đã đánh giá" thay vì nút "Đánh giá" trên giao diện MyOrders
+        var orderIds = orders.Select(o => o.Id).ToList();
+        var reviewedKeys = await _db.Reviews
+            .AsNoTracking()
+            .Where(r => orderIds.Contains(r.OrderId))
+            .Select(r => r.OrderId + "_" + r.ProductId)
+            .ToListAsync();
+
+        ViewBag.ReviewedKeys = new HashSet<string>(reviewedKeys);
+
         return View(orders);
     }
 

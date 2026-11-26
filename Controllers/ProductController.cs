@@ -113,18 +113,30 @@ namespace UltraPokemon.Controllers
         }
 
 
-        // 2. CHI TIẾT THẺ BÀI
+        // 2. CHI TIẾT THẺ BÀI & ĐÁNH GIÁ SAU MUA
 
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
 
+            // [BỔ SUNG REVIEW] Nạp kèm danh sách đánh giá (Reviews) của thẻ bài
             var product = await _context.Products
+                .Include(p => p.Reviews)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (product == null) return NotFound();
 
-            // [ĐÃ FIX] Lấy thêm tối đa 4 thẻ bài cùng hệ (hỗ trợ cả tên hệ tiếng Việt & tiếng Anh) để gợi ý bên dưới
+            // [BỔ SUNG REVIEW] Sắp xếp bình luận mới nhất lên đầu và tính điểm sao trung bình
+            var reviews = product.Reviews
+                .OrderByDescending(r => r.CreatedAt)
+                .ToList();
+
+            ViewBag.Reviews = reviews;
+            ViewBag.AverageRating = reviews.Any()
+                ? Math.Round(reviews.Average(r => r.Rating), 1)
+                : 0.0;
+
+            // Lấy thêm tối đa 4 thẻ bài cùng hệ (hỗ trợ cả tên hệ tiếng Việt & tiếng Anh) để gợi ý bên dưới
             var sameElementVariants = GetElementVariants(product.ElementType);
             var relatedProducts = await _context.Products
                 .Where(p => p.ElementType != null && sameElementVariants.Contains(p.ElementType) && p.Id != product.Id)
@@ -134,6 +146,74 @@ namespace UltraPokemon.Controllers
             ViewBag.RelatedProducts = relatedProducts;
 
             return View(product);
+        }
+
+        // Xử lý lưu đánh giá sản phẩm sau khi đơn hàng đạt trạng thái Completed
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddReview(int orderId, int productId, int rating, string comment)
+        {
+            // 1. Kiểm tra tính hợp lệ của dữ liệu đầu vào
+            if (rating < 1 || rating > 5 || string.IsNullOrWhiteSpace(comment))
+            {
+                TempData["Error"] = "Vui lòng chọn số sao (từ 1 đến 5) và nhập nội dung nhận xét.";
+                return RedirectToAction("MyOrders", "Cart");
+            }
+
+            if (comment.Trim().Length > 500)
+            {
+                TempData["Error"] = "Nội dung nhận xét tối đa 500 ký tự.";
+                return RedirectToAction("MyOrders", "Cart");
+            }
+
+            var userEmail = User.Identity!.Name!;
+
+            // 2. Xác minh đơn hàng tồn tại, thuộc về khách hàng đang đăng nhập và đã hoàn tất (Completed)
+            var order = await _context.Orders
+                .Include(o => o.OrderDetails)
+                .FirstOrDefaultAsync(o => o.Id == orderId && o.UserEmail == userEmail);
+
+            if (order == null || order.Status != OrderStatus.Completed)
+            {
+                TempData["Error"] = "Bạn chỉ có thể đánh giá sản phẩm sau khi đơn hàng đã giao thành công.";
+                return RedirectToAction("MyOrders", "Cart");
+            }
+
+            // 3. Xác minh sản phẩm được đánh giá thực sự nằm trong đơn hàng này
+            bool hasProductInOrder = order.OrderDetails.Any(od => od.ProductId == productId);
+            if (!hasProductInOrder)
+            {
+                TempData["Error"] = "Sản phẩm này không thuộc đơn hàng bạn đã chọn.";
+                return RedirectToAction("MyOrders", "Cart");
+            }
+
+            // 4. Chặn gửi đánh giá trùng lặp cho cùng 1 sản phẩm trong cùng 1 đơn hàng
+            bool alreadyReviewed = await _context.Reviews
+                .AnyAsync(r => r.OrderId == orderId && r.ProductId == productId);
+            if (alreadyReviewed)
+            {
+                TempData["Error"] = "Bạn đã đánh giá sản phẩm này cho đơn hàng trên rồi.";
+                return RedirectToAction("MyOrders", "Cart");
+            }
+
+            // 5. Lưu đánh giá mới vào CSDL
+            var review = new Review
+            {
+                OrderId = orderId,
+                ProductId = productId,
+                ReviewerName = !string.IsNullOrWhiteSpace(order.FullName) ? order.FullName : userEmail,
+                ReviewerEmail = userEmail,
+                Rating = rating,
+                Comment = comment.Trim(),
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Reviews.Add(review);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Cảm ơn bạn đã gửi đánh giá cho sản phẩm!";
+            return RedirectToAction(nameof(Details), new { id = productId });
         }
 
 
