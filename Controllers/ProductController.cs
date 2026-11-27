@@ -32,7 +32,7 @@ namespace UltraPokemon.Controllers
                                       || (p.Description != null && p.Description.ToLower().Contains(keyword)));
             }
 
-            // 2. [ĐÃ FIX] Lọc theo Hệ (khớp cả dữ liệu tiếng Việt lẫn tiếng Anh cũ trong DB)
+            // 2. Lọc theo Hệ (khớp cả dữ liệu tiếng Việt lẫn tiếng Anh cũ trong DB)
             if (!string.IsNullOrWhiteSpace(element))
             {
                 var elementVariants = GetElementVariants(element);
@@ -86,7 +86,7 @@ namespace UltraPokemon.Controllers
             ViewBag.TotalPages = totalPages;
             ViewBag.TotalItems = totalItems;
 
-            // [ĐÃ FIX] Chuẩn hóa danh sách các hệ sang tiếng Việt đồng bộ & loại bỏ nút trùng (Psychic / Tâm linh)
+            // Chuẩn hóa danh sách các hệ sang tiếng Việt đồng bộ & loại bỏ nút trùng (Psychic / Tâm linh)
             var standardElements = new List<string> { "Lửa", "Nước", "Điện", "Đá", "Cỏ", "Tâm linh" };
             var dbCategories = await _context.Categories.Select(c => c.Name).ToListAsync();
             if (!dbCategories.Any())
@@ -119,14 +119,14 @@ namespace UltraPokemon.Controllers
         {
             if (id == null) return NotFound();
 
-            // [BỔ SUNG REVIEW] Nạp kèm danh sách đánh giá (Reviews) của thẻ bài
+            // Nạp kèm danh sách đánh giá (Reviews) của thẻ bài
             var product = await _context.Products
                 .Include(p => p.Reviews)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (product == null) return NotFound();
 
-            // [BỔ SUNG REVIEW] Sắp xếp bình luận mới nhất lên đầu và tính điểm sao trung bình
+            // Sắp xếp bình luận mới nhất lên đầu và tính điểm sao trung bình
             var reviews = product.Reviews
                 .OrderByDescending(r => r.CreatedAt)
                 .ToList();
@@ -229,16 +229,15 @@ namespace UltraPokemon.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Staff")]
-        // Bổ sung "ImageUrl" vào [Bind] và bỏ qua lỗi required nếu để trống ảnh (dùng ảnh mặc định hoặc file upload)
         public async Task<IActionResult> Create([Bind("Name,ElementType,Power,Price,Stock,ImageUrl,Description")] Product product, IFormFile? imageFile, string? imageUrlInput)
         {
             ModelState.Remove("ImageUrl");
             product.ImageUrl ??= string.Empty;
 
-            // Chuẩn hóa tên hệ sang tiếng Việt khi lưu mới
+            // [ĐÃ FIX] Ánh xạ ElementType về đúng giá trị Categories.Name trong DB để không bị lỗi khóa ngoại SQLite
             if (!string.IsNullOrWhiteSpace(product.ElementType))
             {
-                product.ElementType = ToVietnameseElement(product.ElementType);
+                product.ElementType = await ResolveCategoryNameAsync(product.ElementType);
             }
 
             if (ModelState.IsValid)
@@ -307,10 +306,10 @@ namespace UltraPokemon.Controllers
             ModelState.Remove("ImageUrl");
             product.ImageUrl ??= string.Empty;
 
-            // Chuẩn hóa tên hệ sang tiếng Việt khi cập nhật
+            // [ĐÃ FIX] Ánh xạ ElementType về đúng giá trị Categories.Name trong DB để không bị lỗi khóa ngoại SQLite
             if (!string.IsNullOrWhiteSpace(product.ElementType))
             {
-                product.ElementType = ToVietnameseElement(product.ElementType);
+                product.ElementType = await ResolveCategoryNameAsync(product.ElementType);
             }
 
             if (ModelState.IsValid)
@@ -386,7 +385,19 @@ namespace UltraPokemon.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // HÀM HỖ TRỢ CHUẨN HÓA TÊN HỆ TIẾNG VIỆT & ÁNH XẠ SONG NGỮ TRONG SQLITE
+
+        // HÀM HỖ TRỢ ĐỐI CHIẾU KHÓA NGOẠI CATEGORIES.NAME & ÁNH XẠ SONG NGỮ TRONG SQLITE
+
+        private async Task<string> ResolveCategoryNameAsync(string? element)
+        {
+            if (string.IsNullOrWhiteSpace(element)) return string.Empty;
+
+            var variants = GetElementVariants(element);
+            var matchedCategory = await _context.Categories
+                .FirstOrDefaultAsync(c => variants.Contains(c.Name));
+
+            return matchedCategory != null ? matchedCategory.Name : element.Trim();
+        }
 
         private static string ToVietnameseElement(string? element)
         {
@@ -420,6 +431,7 @@ namespace UltraPokemon.Controllers
                 _ => new[] { trimmed }
             };
         }
+
 
         // HÀM HỖ TRỢ KIỂM TRA & LƯU FILE ẢNH VÀO WWWROOT/IMAGES/CARDS
 
